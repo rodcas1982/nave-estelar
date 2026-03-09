@@ -141,6 +141,14 @@
         <h1>🚀 Nave Estelar</h1>
         <p>Móvil: Usa los botones</p>
         <p>PC: Flechas + Espacio</p>
+        <div style="margin: 20px 0;">
+            <label style="color: #00ffcc; margin-right: 10px;">Nivel:</label>
+            <select id="difficultySelect" onchange="setDifficulty()" style="padding: 8px 15px; border-radius: 20px; background: rgba(255,255,255,0.1); color: white; border: 1px solid #00ffcc; font-size: 14px;">
+                <option value="easy">🥰 Fácil</option>
+                <option value="normal" selected>⚖️ Normal</option>
+                <option value="hard">💀 Difícil</option>
+            </select>
+        </div>
         <button onclick="startGame()">JUGAR</button>
     </div>
 
@@ -161,7 +169,15 @@
         let score = 0;
         let highScore = localStorage.getItem('naveEstelarHighScore') || 0;
         let lives = 3;
+        let difficulty = 'normal';
         let keys = { left: false, right: false, shoot: false };
+        
+        // Difficulty settings
+        const difficultySettings = {
+            easy: { spawnRate: 0.015, enemySpeed: 1.5, enemyHp: 1 },
+            normal: { spawnRate: 0.025, enemySpeed: 2.5, enemyHp: 1 },
+            hard: { spawnRate: 0.04, enemySpeed: 4, enemyHp: 2 }
+        };
         
         // Player
         const player = {
@@ -243,6 +259,10 @@
             document.querySelector('#overlay button').textContent = 'REINTENTAR';
         }
         
+        function setDifficulty() {
+            difficulty = document.getElementById('difficultySelect').value;
+        }
+        
         function updateUI() {
             document.getElementById('score').textContent = score;
             document.getElementById('highScore').textContent = highScore;
@@ -250,14 +270,15 @@
         }
         
         function spawnEnemy() {
-            if (Math.random() < 0.02 + score / 50000) {
+            const settings = difficultySettings[difficulty];
+            if (Math.random() < settings.spawnRate + score / 80000) {
                 enemies.push({
                     x: Math.random() * (canvas.width - 40),
                     y: -30,
                     width: 30 + Math.random() * 20,
                     height: 30 + Math.random() * 20,
-                    speed: 2 + Math.random() * 2 + score / 10000,
-                    hp: 1 + Math.floor(score / 5000)
+                    speed: settings.enemySpeed + Math.random() * 1.5 + score / 15000,
+                    hp: settings.enemyHp + Math.floor(score / 8000)
                 });
             }
         }
@@ -294,35 +315,48 @@
                 return b.y > -10;
             });
             
-            // Update enemies
+            // Spawn new enemies
             spawnEnemy();
-            enemies = enemies.filter(e => {
+            
+            // Check collisions - separate from enemy update
+            let enemiesToRemove = [];
+            let bulletsToRemove = [];
+            
+            enemies.forEach((e, ei) => {
                 e.y += e.speed;
                 
-                // Collision with bullets
-                bullets = bullets.filter(b => {
-                    if (Math.abs(b.x - e.x) < e.width/2 && Math.abs(b.y - e.y) < e.height/2) {
+                bullets.forEach((b, bi) => {
+                    // More forgiving hitbox for bullets
+                    const hitDistX = Math.abs(b.x - e.x);
+                    const hitDistY = Math.abs(b.y - e.y);
+                    
+                    if (hitDistX < e.width/2 + 5 && hitDistY < e.height/2 + 10) {
                         e.hp--;
+                        bulletsToRemove.push(bi);
                         if (e.hp <= 0) {
                             score += 100;
                             createExplosion(e.x, e.y, '#00ffcc');
+                            enemiesToRemove.push(ei);
                         }
-                        return false;
                     }
-                    return true;
                 });
                 
                 // Collision with player
-                if (Math.abs(player.x - e.x) < (player.width + e.width)/2 && 
-                    Math.abs(player.y - e.y) < (player.height + e.height)/2) {
+                if (Math.abs(player.x - e.x) < (player.width + e.width)/2 - 5 && 
+                    Math.abs(player.y - e.y) < (player.height + e.height)/2 - 5) {
                     lives--;
                     createExplosion(player.x, player.y, '#ff6b6b');
+                    enemiesToRemove.push(ei);
                     if (lives <= 0) gameOver();
-                    return false;
                 }
-                
-                return e.y < canvas.height + 50;
             });
+            
+            // Remove dead enemies and used bullets
+            enemies = enemies.filter((_, i) => !enemiesToRemove.includes(i));
+            bullets = bullets.filter((_, i) => !bulletsToRemove.includes(i));
+            
+            // Remove enemies that went off screen
+            enemies = enemies.filter(e => e.y < canvas.height + 50);
             
             // Update particles
             particles = particles.filter(p => {
