@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Nave Estelar 🚀</title>
     <style>
         * {
@@ -36,9 +36,9 @@
             color: #ff6b6b;
             font-size: 16px;
         }
-        /* Mobile Controls */
+        /* Mobile Controls - always show on touch devices */
         #controls {
-            display: none;
+            display: flex;
             position: absolute;
             bottom: 20px;
             left: 0;
@@ -46,6 +46,14 @@
             justify-content: space-between;
             padding: 0 15px;
             align-items: flex-end;
+            z-index: 50;
+        }
+        
+        /* Hide on desktop */
+        @media (hover: hover) and (pointer: fine) {
+            #controls {
+                display: none;
+            }
         }
         .movement-controls {
             display: flex;
@@ -217,6 +225,30 @@
             if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
             if (e.key === ' ') keys.shoot = false;
         });
+        
+        // Show controls on touch devices and orientation change
+        function showMobileControls() {
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            if (isTouchDevice) {
+                document.getElementById('controls').style.display = 'flex';
+            }
+        }
+        
+        // Initial check
+        showMobileControls();
+        
+        // Show controls on orientation change
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                resizeCanvas();
+                showMobileControls();
+                // Reposition player if needed
+                player.y = canvas.height - 80;
+            }, 100);
+        });
+        
+        // Also show on any touch interaction
+        document.addEventListener('touchstart', showMobileControls, { once: false });
         
         // Touch controls
         const leftBtn = document.getElementById('leftBtn');
