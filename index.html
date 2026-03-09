@@ -39,13 +39,12 @@
         /* Health Bar */
         #healthBar {
             position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 200px;
-            height: 12px;
+            top: 40px;
+            left: 10px;
+            width: 120px;
+            height: 10px;
             background: rgba(255,255,255,0.2);
-            border-radius: 6px;
+            border-radius: 5px;
             overflow: hidden;
             border: 1px solid rgba(255,255,255,0.3);
         }
@@ -217,6 +216,8 @@
         // Game objects
         let bullets = [];
         let enemies = [];
+        let enemyBullets = [];
+        let enemyShips = [];
         let particles = [];
         let stars = [];
         
@@ -283,7 +284,9 @@
             player.x = canvas.width / 2;
             player.y = canvas.height - 80;
             bullets = [];
+            enemyBullets = [];
             enemies = [];
+            enemyShips = [];
             particles = [];
             score = 0;
             lives = 3;
@@ -323,6 +326,8 @@
         
         function spawnEnemy() {
             const settings = difficultySettings[difficulty];
+            
+            // Spawn asteroids (default enemies)
             if (Math.random() < settings.spawnRate + score / 80000) {
                 enemies.push({
                     x: Math.random() * (canvas.width - 40),
@@ -330,7 +335,22 @@
                     width: 30 + Math.random() * 20,
                     height: 30 + Math.random() * 20,
                     speed: settings.enemySpeed + Math.random() * 1.5 + score / 15000,
-                    hp: settings.enemyHp + Math.floor(score / 8000)
+                    hp: settings.enemyHp + Math.floor(score / 8000),
+                    type: 'asteroid'
+                });
+            }
+            
+            // Spawn enemy ships (red ships that shoot) - starts after score > 500
+            if (score > 500 && Math.random() < 0.005 + score / 200000) {
+                enemyShips.push({
+                    x: Math.random() * (canvas.width - 40),
+                    y: -40,
+                    width: 35,
+                    height: 45,
+                    speed: settings.enemySpeed * 0.7,
+                    hp: 2,
+                    cooldown: 60,
+                    type: 'ship'
                 });
             }
         }
@@ -406,6 +426,63 @@
             // Remove dead enemies and used bullets
             enemies = enemies.filter((_, i) => !enemiesToRemove.includes(i));
             bullets = bullets.filter((_, i) => !bulletsToRemove.includes(i));
+            
+            // Update enemy ships
+            let enemyShipsToRemove = [];
+            enemyShips.forEach((ship, si) => {
+                ship.y += ship.speed;
+                
+                // Ship shoots
+                if (ship.cooldown > 0) ship.cooldown--;
+                if (ship.cooldown === 0 && ship.y > 50) {
+                    enemyBullets.push({ x: ship.x, y: ship.y + 20, speed: 6 });
+                    ship.cooldown = 80;
+                }
+                
+                // Collision with player bullets
+                bullets.forEach((b, bi) => {
+                    const hitDistX = Math.abs(b.x - ship.x);
+                    const hitDistY = Math.abs(b.y - ship.y);
+                    if (hitDistX < ship.width/2 + 5 && hitDistY < ship.height/2 + 10) {
+                        ship.hp--;
+                        bulletsToRemove.push(bi);
+                        if (ship.hp <= 0) {
+                            score += 250;
+                            createExplosion(ship.x, ship.y, '#ff0000');
+                            enemyShipsToRemove.push(si);
+                        }
+                    }
+                });
+                
+                // Collision with player
+                if (Math.abs(player.x - ship.x) < (player.width + ship.width)/2 - 5 && 
+                    Math.abs(player.y - ship.y) < (player.height + ship.height)/2 - 5) {
+                    lives--;
+                    createExplosion(player.x, player.y, '#ff6b6b');
+                    enemyShipsToRemove.push(si);
+                    if (lives <= 0) gameOver();
+                }
+            });
+            enemyShips = enemyShips.filter((_, i) => !enemyShipsToRemove.includes(i));
+            
+            // Update enemy bullets
+            let playerHit = false;
+            enemyBullets = enemyBullets.filter(b => {
+                b.y += b.speed;
+                
+                // Hit player
+                if (Math.abs(b.x - player.x) < player.width/2 && 
+                    Math.abs(b.y - player.y) < player.height/2) {
+                    lives--;
+                    createExplosion(player.x, player.y, '#ff6b6b');
+                    playerHit = true;
+                    return false;
+                }
+                
+                return b.y < canvas.height + 10;
+            });
+            
+            if (playerHit && lives <= 0) gameOver();
             
             // Remove enemies that went off screen
             enemies = enemies.filter(e => e.y < canvas.height + 50);
@@ -501,6 +578,46 @@
                 }
                 
                 ctx.restore();
+            });
+            
+            // Draw enemy ships (red ships)
+            enemyShips.forEach(ship => {
+                ctx.save();
+                ctx.translate(ship.x, ship.y);
+                
+                // Red ship body pointing down (south)
+                ctx.fillStyle = '#ff3333';
+                ctx.beginPath();
+                ctx.moveTo(0, 25);  // nose pointing south (down)
+                ctx.lineTo(-18, -20);
+                ctx.lineTo(0, -10);
+                ctx.lineTo(18, -20);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Engine glow (at top, pointing north)
+                ctx.fillStyle = '#ff6600';
+                ctx.beginPath();
+                ctx.moveTo(-7, -18);
+                ctx.lineTo(0, -30 - Math.random() * 8);
+                ctx.lineTo(7, -18);
+                ctx.fill();
+                
+                // Cockpit
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 5, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            });
+            
+            // Draw enemy bullets (red)
+            ctx.fillStyle = '#ff4444';
+            enemyBullets.forEach(b => {
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
+                ctx.fill();
             });
             
             // Draw particles
