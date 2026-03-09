@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nave Estelar 🚀</title>
     <style>
         * {
@@ -55,7 +55,7 @@
             background: linear-gradient(90deg, #ff6b6b, #00ffcc);
             transition: width 0.3s ease;
         }
-        /* Mobile Controls - always show on touch devices */
+        /* Mobile Controls - always visible */
         #controls {
             display: flex;
             position: absolute;
@@ -68,12 +68,6 @@
             z-index: 50;
         }
         
-        /* Hide on desktop */
-        @media (hover: hover) and (pointer: fine) {
-            #controls {
-                display: none;
-            }
-        }
         .movement-controls {
             display: flex;
             gap: 10px;
