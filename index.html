@@ -325,8 +325,9 @@
     let gameRunning = false;
     let score = 0;
     let highScore = localStorage.getItem('naveEstelarHighScore') || 0;
-    let lives = 3;
+    let lives = 999; // 🌀 MODO DIOS ACTIVADO
     let health = 100;
+    let godMode = true; // 🌀 INVENCIBLE
     let level = 1;
     let difficulty = 'normal';
     let kills = 0;
@@ -482,7 +483,7 @@
         }
         
         hit(damage) {
-            if (this.invincible > 0 || activePowerUps.shield > 0) return;
+            if (this.invincible > 0 || activePowerUps.shield > 0 || godMode) return;
             
             health -= damage;
             createParticles(this.x, this.y, 20, '#ff6b6b');
