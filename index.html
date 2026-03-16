@@ -84,49 +84,50 @@
         }
         
         /* Mobile Controls */
-        #controls {
-            display: none;
+        /* Touch zones - full screen controls */
+        #touchZone {
             position: absolute;
-            bottom: 20px;
+            top: 0;
             left: 0;
-            right: 0;
-            justify-content: space-between;
-            padding: 0 20px;
-            align-items: flex-end;
-            z-index: 50;
+            width: 100%;
+            height: 100%;
+            z-index: 40;
+            display: none;
         }
-        .movement-controls {
-            display: flex;
-            gap: 12px;
-        }
-        .control-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.1);
-            border: 2px solid rgba(0,255,204,0.4);
-            color: #00ffcc;
-            font-size: 20px;
+        .touch-zone {
+            position: absolute;
+            bottom: 0;
+            height: 40%;
+            width: 35%;
             display: flex;
             align-items: center;
             justify-content: center;
-            user-select: none;
-            -webkit-user-select: none;
-            backdrop-filter: blur(5px);
+            opacity: 0;
+            transition: opacity 0.2s;
         }
-        .control-btn:active {
-            background: rgba(0,255,204,0.4);
-            transform: scale(0.95);
+        .touch-zone.active {
+            opacity: 1;
         }
-        .shoot-btn {
-            background: rgba(255,107,107,0.2);
-            border-color: #ff6b6b;
-            width: 70px;
-            height: 70px;
-            font-size: 24px;
+        .touch-zone-left {
+            left: 0;
         }
-        .shoot-btn:active {
-            background: rgba(255,107,107,0.5);
+        .touch-zone-right {
+            right: 0;
+        }
+        .touch-zone-center {
+            left: 35%;
+            width: 30%;
+            bottom: 10px;
+        }
+        .touch-indicator {
+            font-size: 3em;
+            color: rgba(0,255,204,0.3);
+            pointer-events: none;
+        }
+        
+        /* Legacy controls hidden on mobile */
+        #controls {
+            display: none;
         }
         
         /* Overlay */
@@ -261,8 +262,9 @@
             color: #00ffcc;
         }
         
-        @media (max-width: 768px) {
-            #controls { display: flex; }
+        @media (max-width: 768px), (pointer: coarse) {
+            #controls { display: none; }
+            #touchZone { display: flex; }
             #overlay h1 { font-size: 2em; }
         }
     </style>
@@ -287,6 +289,19 @@
             <button class="control-btn" id="rightBtn">▶</button>
         </div>
         <button class="control-btn shoot-btn" id="shootBtn">🔥</button>
+    </div>
+
+    <!-- Touch Zones for gesture control -->
+    <div id="touchZone">
+        <div class="touch-zone touch-zone-left" id="zoneLeft">
+            <span class="touch-indicator">◀</span>
+        </div>
+        <div class="touch-zone touch-zone-center" id="zoneShoot">
+            <span class="touch-indicator" style="color:rgba(255,107,107,0.3)">🔥</span>
+        </div>
+        <div class="touch-zone touch-zone-right" id="zoneRight">
+            <span class="touch-indicator">▶</span>
+        </div>
     </div>
 
     <div id="overlay">
@@ -947,21 +962,65 @@
         keys[e.key] = false;
     });
     
-    // Touch controls
+    // Touch controls - Full screen gesture zones
+    const touchZone = document.getElementById('touchZone');
+    const zoneLeft = document.getElementById('zoneLeft');
+    const zoneRight = document.getElementById('zoneRight');
+    const zoneShoot = document.getElementById('zoneShoot');
+    
+    // Show touch zones on mobile
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        document.getElementById('controls').style.display = 'none';
+        touchZone.style.display = 'flex';
+    }
+    
+    // Touch event handlers
+    function handleTouchStart(side) {
+        if (side === 'left') touchLeft = true;
+        if (side === 'right') touchRight = true;
+        if (side === 'shoot') touchShoot = true;
+        document.getElementById('zone' + side.charAt(0).toUpperCase() + side.slice(1)).classList.add('active');
+    }
+    
+    function handleTouchEnd(side) {
+        if (side === 'left') touchLeft = false;
+        if (side === 'right') touchRight = false;
+        if (side === 'shoot') touchShoot = false;
+        document.getElementById('zone' + side.charAt(0).toUpperCase() + side.slice(1)).classList.remove('active');
+    }
+    
+    // Left zone
+    zoneLeft.addEventListener('touchstart', (e) => { e.preventDefault(); handleTouchStart('left'); });
+    zoneLeft.addEventListener('touchend', (e) => { e.preventDefault(); handleTouchEnd('left'); });
+    zoneLeft.addEventListener('touchcancel', (e) => { e.preventDefault(); handleTouchEnd('left'); });
+    
+    // Right zone
+    zoneRight.addEventListener('touchstart', (e) => { e.preventDefault(); handleTouchStart('right'); });
+    zoneRight.addEventListener('touchend', (e) => { e.preventDefault(); handleTouchEnd('right'); });
+    zoneRight.addEventListener('touchcancel', (e) => { e.preventDefault(); handleTouchEnd('right'); });
+    
+    // Shoot zone (center)
+    zoneShoot.addEventListener('touchstart', (e) => { e.preventDefault(); handleTouchStart('shoot'); });
+    zoneShoot.addEventListener('touchend', (e) => { e.preventDefault(); handleTouchEnd('shoot'); });
+    zoneShoot.addEventListener('touchcancel', (e) => { e.preventDefault(); handleTouchEnd('shoot'); });
+    
+    // Mouse fallback for testing on PC
+    zoneLeft.addEventListener('mousedown', () => handleTouchStart('left'));
+    zoneLeft.addEventListener('mouseup', () => handleTouchEnd('left'));
+    zoneLeft.addEventListener('mouseleave', () => handleTouchEnd('left'));
+    zoneRight.addEventListener('mousedown', () => handleTouchStart('right'));
+    zoneRight.addEventListener('mouseup', () => handleTouchEnd('right'));
+    zoneRight.addEventListener('mouseleave', () => handleTouchEnd('right'));
+    zoneShoot.addEventListener('mousedown', () => handleTouchStart('shoot'));
+    zoneShoot.addEventListener('mouseup', () => handleTouchEnd('shoot'));
+    
+    // Legacy button controls (for non-touch devices)
     document.getElementById('leftBtn').addEventListener('touchstart', () => touchLeft = true);
     document.getElementById('leftBtn').addEventListener('touchend', () => touchLeft = false);
     document.getElementById('rightBtn').addEventListener('touchstart', () => touchRight = true);
     document.getElementById('rightBtn').addEventListener('touchend', () => touchRight = false);
     document.getElementById('shootBtn').addEventListener('touchstart', () => touchShoot = true);
     document.getElementById('shootBtn').addEventListener('touchend', () => touchShoot = false);
-    
-    // Mouse controls (for testing on PC)
-    document.getElementById('leftBtn').addEventListener('mousedown', () => touchLeft = true);
-    document.getElementById('leftBtn').addEventListener('mouseup', () => touchLeft = false);
-    document.getElementById('rightBtn').addEventListener('mousedown', () => touchRight = true);
-    document.getElementById('rightBtn').addEventListener('mouseup', () => touchRight = false);
-    document.getElementById('shootBtn').addEventListener('mousedown', () => touchShoot = true);
-    document.getElementById('shootBtn').addEventListener('mouseup', () => touchShoot = false);
     
     // Initialize
     initStars();
