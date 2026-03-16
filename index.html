@@ -84,8 +84,8 @@
         }
         
         /* Mobile Controls */
-        /* Touch zones - full screen controls */
-        #touchZone {
+        /* Touch controls - Full screen gesture (NEW INTUITIVE) */
+        #touchControls {
             position: absolute;
             top: 0;
             left: 0;
@@ -94,40 +94,30 @@
             z-index: 40;
             display: none;
         }
-        .touch-zone {
+        
+        /* Visual feedback */
+        .touch-feedback {
             position: absolute;
-            bottom: 0;
-            height: 40%;
-            width: 35%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,255,204,0.3) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
             opacity: 0;
-            transition: opacity 0.2s;
+            transition: opacity 0.1s;
         }
-        .touch-zone.active {
+        .touch-feedback.active {
             opacity: 1;
         }
-        .touch-zone-left {
-            left: 0;
-        }
-        .touch-zone-right {
-            right: 0;
-        }
-        .touch-zone-center {
-            left: 35%;
-            width: 30%;
-            bottom: 10px;
-        }
-        .touch-indicator {
-            font-size: 3em;
-            color: rgba(0,255,204,0.3);
-            pointer-events: none;
+        .touch-feedback.shooting {
+            background: radial-gradient(circle, rgba(255,107,107,0.4) 0%, transparent 70%);
         }
         
-        /* Legacy controls hidden on mobile */
-        #controls {
-            display: none;
+        /* Show on mobile */
+        @media (max-width: 768px), (pointer: coarse) {
+            #touchControls { display: block; }
+            #controls { display: none; }
         }
         
         /* Overlay */
@@ -264,7 +254,7 @@
         
         @media (max-width: 768px), (pointer: coarse) {
             #controls { display: none; }
-            #touchZone { display: flex; }
+            #touchControls { display: block; }
             #overlay h1 { font-size: 2em; }
         }
     </style>
@@ -291,17 +281,9 @@
         <button class="control-btn shoot-btn" id="shootBtn">🔥</button>
     </div>
 
-    <!-- Touch Zones for gesture control -->
-    <div id="touchZone">
-        <div class="touch-zone touch-zone-left" id="zoneLeft">
-            <span class="touch-indicator">◀</span>
-        </div>
-        <div class="touch-zone touch-zone-center" id="zoneShoot">
-            <span class="touch-indicator" style="color:rgba(255,107,107,0.3)">🔥</span>
-        </div>
-        <div class="touch-zone touch-zone-right" id="zoneRight">
-            <span class="touch-indicator">▶</span>
-        </div>
+    <!-- New intuitive touch controls -->
+    <div id="touchControls">
+        <div class="touch-feedback" id="touchFeedback"></div>
     </div>
 
     <div id="overlay">
@@ -962,57 +944,122 @@
         keys[e.key] = false;
     });
     
-    // Touch controls - Full screen gesture zones
-    const touchZone = document.getElementById('touchZone');
-    const zoneLeft = document.getElementById('zoneLeft');
-    const zoneRight = document.getElementById('zoneRight');
-    const zoneShoot = document.getElementById('zoneShoot');
+    // New intuitive touch controls - ship follows finger
+    const touchControls = document.getElementById('touchControls');
+    const touchFeedback = document.getElementById('touchFeedback');
+    let touchX = null;
+    let isTouching = false;
     
-    // Show touch zones on mobile
+    // Show touch controls on mobile
     if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         document.getElementById('controls').style.display = 'none';
-        touchZone.style.display = 'flex';
     }
     
-    // Touch event handlers
-    function handleTouchStart(side) {
-        if (side === 'left') touchLeft = true;
-        if (side === 'right') touchRight = true;
-        if (side === 'shoot') touchShoot = true;
-        document.getElementById('zone' + side.charAt(0).toUpperCase() + side.slice(1)).classList.add('active');
+    function updateTouchFeedback(x, y, shooting) {
+        touchFeedback.style.left = x + 'px';
+        touchFeedback.style.top = y + 'px';
+        touchFeedback.classList.add('active');
+        if (shooting) {
+            touchFeedback.classList.add('shooting');
+        } else {
+            touchFeedback.classList.remove('shooting');
+        }
     }
     
-    function handleTouchEnd(side) {
-        if (side === 'left') touchLeft = false;
-        if (side === 'right') touchRight = false;
-        if (side === 'shoot') touchShoot = false;
-        document.getElementById('zone' + side.charAt(0).toUpperCase() + side.slice(1)).classList.remove('active');
+    function hideTouchFeedback() {
+        touchFeedback.classList.remove('active', 'shooting');
     }
     
-    // Left zone
-    zoneLeft.addEventListener('touchstart', (e) => { e.preventDefault(); handleTouchStart('left'); });
-    zoneLeft.addEventListener('touchend', (e) => { e.preventDefault(); handleTouchEnd('left'); });
-    zoneLeft.addEventListener('touchcancel', (e) => { e.preventDefault(); handleTouchEnd('left'); });
+    // Touch start - set target position
+    touchControls.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        touchX = touch.clientX;
+        touchY = touch.clientY;
+        isTouching = true;
+        
+        // Check if touching center area for shooting
+        const centerZone = window.innerWidth * 0.3;
+        const isCenter = touchX > centerZone && touchX < (window.innerWidth - centerZone);
+        if (isCenter) {
+            touchShoot = true;
+            updateTouchFeedback(touchX, touchY, true);
+        } else {
+            updateTouchFeedback(touchX, touchY, false);
+        }
+    });
     
-    // Right zone
-    zoneRight.addEventListener('touchstart', (e) => { e.preventDefault(); handleTouchStart('right'); });
-    zoneRight.addEventListener('touchend', (e) => { e.preventDefault(); handleTouchEnd('right'); });
-    zoneRight.addEventListener('touchcancel', (e) => { e.preventDefault(); handleTouchEnd('right'); });
+    // Touch move - update target position
+    touchControls.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (!isTouching) return;
+        
+        const touch = e.touches[0];
+        touchX = touch.clientX;
+        touchY = touch.clientY;
+        
+        // Check center for shooting
+        const centerZone = window.innerWidth * 0.3;
+        const isCenter = touchX > centerZone && touchX < (window.innerWidth - centerZone);
+        touchShoot = isCenter;
+        updateTouchFeedback(touchX, touchY, isCenter);
+    });
     
-    // Shoot zone (center)
-    zoneShoot.addEventListener('touchstart', (e) => { e.preventDefault(); handleTouchStart('shoot'); });
-    zoneShoot.addEventListener('touchend', (e) => { e.preventDefault(); handleTouchEnd('shoot'); });
-    zoneShoot.addEventListener('touchcancel', (e) => { e.preventDefault(); handleTouchEnd('shoot'); });
+    // Touch end
+    touchControls.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        isTouching = false;
+        touchX = null;
+        touchShoot = false;
+        hideTouchFeedback();
+    });
     
-    // Mouse fallback for testing on PC
-    zoneLeft.addEventListener('mousedown', () => handleTouchStart('left'));
-    zoneLeft.addEventListener('mouseup', () => handleTouchEnd('left'));
-    zoneLeft.addEventListener('mouseleave', () => handleTouchEnd('left'));
-    zoneRight.addEventListener('mousedown', () => handleTouchStart('right'));
-    zoneRight.addEventListener('mouseup', () => handleTouchEnd('right'));
-    zoneRight.addEventListener('mouseleave', () => handleTouchEnd('right'));
-    zoneShoot.addEventListener('mousedown', () => handleTouchStart('shoot'));
-    zoneShoot.addEventListener('mouseup', () => handleTouchEnd('shoot'));
+    touchControls.addEventListener('touchcancel', (e) => {
+        isTouching = false;
+        touchX = null;
+        touchShoot = false;
+        hideTouchFeedback();
+    });
+    
+    // Update player to follow touch
+    const originalPlayerUpdate = Player.prototype.update;
+    Player.prototype.update = function() {
+        // Touch control - move towards touch position
+        if (touchX !== null && isTouching) {
+            const diff = touchX - this.x;
+            const moveSpeed = this.speed + (activePowerUps.speed > 0 ? 3 : 0);
+            
+            if (Math.abs(diff) > 10) {
+                this.x += Math.sign(diff) * Math.min(Math.abs(diff), moveSpeed);
+            }
+        } else {
+            // Keyboard controls
+            if (keys['ArrowLeft'] || keys['a']) {
+                this.x -= this.speed;
+            }
+            if (keys['ArrowRight'] || keys['d']) {
+                this.x += this.speed;
+            }
+        }
+        
+        // Boundaries
+        this.x = Math.max(this.width/2, Math.min(canvas.width - this.width/2, this.x));
+        
+        // Shooting
+        if ((keys[' '] || touchShoot) && this.shootDelay <= 0) {
+            this.shoot();
+            this.shootDelay = activePowerUps.rapidFire > 0 ? 5 : 15;
+        }
+        if (this.shootDelay > 0) this.shootDelay--;
+        
+        // Invincibility
+        if (this.invincible > 0) this.invincible--;
+        
+        // Power-up timers
+        for (let p in activePowerUps) {
+            if (activePowerUps[p] > 0) activePowerUps[p]--;
+        }
+    };
     
     // Legacy button controls (for non-touch devices)
     document.getElementById('leftBtn').addEventListener('touchstart', () => touchLeft = true);
