@@ -293,8 +293,8 @@
 
     <!-- New intuitive touch controls - split screen -->
     <div id="touchControls">
-        <div class="touch-zone-indicator left" id="zoneLeft">◀ IZQUIERDA</div>
-        <div class="touch-zone-indicator right" id="zoneRight">DERECHA ▶<br><span style="font-size:0.5em">TAP = 💥</span></div>
+        <div class="touch-zone-indicator left" id="zoneLeft">◀ MOVER</div>
+        <div class="touch-zone-indicator right" id="zoneRight">💥 DISPARAR<br><span style="font-size:0.4em">🚀 Toca enemigo</span></div>
     </div>
 
     <div id="overlay">
@@ -311,8 +311,10 @@
             <div><span class="stat-label">Nivel:</span> <span class="stat-value" id="finalLevel">1</span></div>
             <div><span class="stat-label">Kills:</span> <span class="stat-value" id="finalKills">0</span></div>
         </div>
-        <p style="margin-top:30px;opacity:0.5;font-size:0.8em;">
-            🖥️ PC: Flechas + Espacio | 📱 Móvil: Botones
+        <p style="margin-top:30px;opacity:0.7;font-size:0.9em;text-align:center;">
+            📱 MÓVIL: Izquierda=IZQ, Derecha=TAP para disparar<br>
+            🎯 ¡Toca cerca de un enemigo para lanzar cohete! 🚀<br>
+            🖥️ PC: Flechas + Espacio
         </p>
     </div>
 
@@ -349,6 +351,7 @@
         rapidFire: 0,
         speed: 0
     };
+    let hasRocket = false;
     
     // Achievements
     const achievements = [
@@ -654,7 +657,7 @@
         constructor(x, y) {
             this.x = x;
             this.y = y;
-            this.types = ['shield', 'doubleShot', 'rapidFire', 'speed'];
+            this.types = ['shield', 'doubleShot', 'rapidFire', 'speed', 'rocket'];
             this.type = this.types[Math.floor(Math.random() * this.types.length)];
             this.speed = 2;
             this.size = 25;
@@ -669,13 +672,15 @@
                 shield: '#00ffcc',
                 doubleShot: '#ffd93d',
                 rapidFire: '#ff6b6b',
-                speed: '#a855f7'
+                speed: '#a855f7',
+                rocket: '#ff4444'
             };
             const icons = {
                 shield: '🛡️',
                 doubleShot: '⚡',
                 rapidFire: '🔥',
-                speed: '💨'
+                speed: '💨',
+                rocket: '🚀'
             };
             
             ctx.save();
@@ -728,6 +733,9 @@
         }
         if (activePowerUps.rapidFire > 0) {
             indicator.innerHTML += '<div class="powerUp-icon" style="background:#ff6b6b">🔥</div>';
+        }
+        if (hasRocket) {
+            indicator.innerHTML += '<div class="powerUp-icon" style="background:#ff4444">🚀</div>';
         }
         
         // Update achievements display
@@ -921,11 +929,21 @@
             
             // Collision with player
             if (Math.abs(p.x - player.x) < 35 && Math.abs(p.y - player.y) < 35) {
-                activePowerUps[p.type] = 300; // 5 seconds
+                if (p.type === 'rocket') {
+                    hasRocket = true;
+                } else {
+                    activePowerUps[p.type] = 300;
+                }
                 powerUps.splice(powerUps.indexOf(p), 1);
                 score += 50;
             }
         });
+        
+        // Update rockets
+        updateRockets();
+        
+        // Draw rockets
+        drawRockets();
         
         // Update particles
         particles = particles.filter(p => p.life > 0);
@@ -955,17 +973,125 @@
         keys[e.key] = false;
     });
     
-    // New intuitive touch controls - split screen: left/right move, tap to shoot
+    // New intuitive touch controls - split screen: move + aim & shoot enemies
     const touchControls = document.getElementById('touchControls');
+    const zoneLeftEl = document.getElementById('zoneLeft');
+    const zoneRightEl = document.getElementById('zoneRight');
     let leftTouch = null;
     let rightTouch = null;
     let isLeftTouching = false;
     let isRightTouching = false;
-    let lastTap = 0;
+    
+    // Rocket weapon
+    let hasRocket = false;
+    let rockets = [];
     
     // Show touch controls on mobile
     if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         document.getElementById('controls').style.display = 'none';
+    }
+    
+    // Touch start
+    touchControls.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        
+        for (let touch of e.touches) {
+            const x = touch.clientX;
+            const screenWidth = window.innerWidth;
+            
+            // Check if touching near an enemy - auto aim and shoot!
+            if (hasRocket) {
+                const target = findTargetAt(touch.clientX, touch.clientY);
+                if (target) {
+                    shootRocket(target);
+                    hasRocket = false;
+                }
+            }
+            
+            if (x < screenWidth / 2) {
+                leftTouch = touch.identifier;
+                isLeftTouching = true;
+                zoneLeftEl.classList.add('active');
+            } else {
+                rightTouch = touch.identifier;
+                isRightTouching = true;
+                zoneRightEl.classList.add('active');
+            }
+        }
+    });
+    
+    // Find enemy at touch position
+    function findTargetAt(touchX, touchY) {
+        for (let enemy of enemies) {
+            const dx = enemy.x - touchX;
+            const dy = enemy.y - touchY;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < 80) { // Touch near enemy
+                return enemy;
+            }
+        }
+        return null;
+    }
+    
+    // Shoot rocket at target
+    function shootRocket(target) {
+        rockets.push({
+            x: player.x,
+            y: player.y,
+            target: target,
+            speed: 15
+        });
+    }
+    
+    // Update rockets
+    function updateRockets() {
+        rockets = rockets.filter(r => {
+            if (!r.target || r.target.health <= 0) return false;
+            
+            const dx = r.target.x - r.x;
+            const dy = r.target.y - r.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if (dist < 30) {
+                // Hit!
+                createParticles(r.target.x, r.target.y, 30, '#ff6b6b');
+                r.target.health -= 5;
+                if (r.target.health <= 0) {
+                    score += r.target.type === 'fighter' ? 500 : 250;
+                    kills++;
+                }
+                return false;
+            }
+            
+            r.x += (dx / dist) * r.speed;
+            r.y += (dy / dist) * r.speed;
+            return true;
+        });
+    }
+    
+    // Draw rockets
+    function drawRockets() {
+        rockets.forEach(r => {
+            ctx.save();
+            ctx.fillStyle = '#ff6b6b';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#ff6b6b';
+            
+            // Rocket trail
+            ctx.beginPath();
+            ctx.moveTo(r.x, r.y);
+            ctx.lineTo(r.x - 5, r.y - 15);
+            ctx.lineTo(r.x + 5, r.y - 15);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Rocket head
+            ctx.beginPath();
+            ctx.arc(r.x, r.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        });
     }
     
     // Touch start
