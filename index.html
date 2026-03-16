@@ -84,7 +84,7 @@
         }
         
         /* Mobile Controls */
-        /* Touch controls - invisible, only when game running */
+        /* Touch controls - Split screen (left/right) */
         #touchControls {
             position: absolute;
             top: 0;
@@ -93,16 +93,40 @@
             height: 100%;
             z-index: 40;
             display: none;
+        }
+        
+        /* Visual zones */
+        .touch-zone-indicator {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 45%;
+            height: 60%;
+            border: 2px dashed rgba(255,255,255,0.1);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            color: rgba(255,255,255,0.15);
             pointer-events: none;
+            transition: all 0.2s;
+        }
+        .touch-zone-indicator.left {
+            left: 2%;
+        }
+        .touch-zone-indicator.right {
+            right: 2%;
+        }
+        .touch-zone-indicator.active {
+            background: rgba(0,255,204,0.1);
+            border-color: rgba(0,255,204,0.5);
+            color: rgba(0,255,204,0.5);
         }
         
-        #touchControls.active {
-            display: block;
-            pointer-events: auto;
-        }
-        
-        /* Show on mobile - but hide indicators */
+        /* Show on mobile */
         @media (max-width: 768px), (pointer: coarse) {
+            #touchControls { display: block; }
             #controls { display: none; }
         }
         
@@ -119,7 +143,7 @@
             align-items: center;
             justify-content: center;
             color: white;
-            z-index: 200;
+            z-index: 100;
         }
         #overlay h1 {
             font-size: 3em;
@@ -267,8 +291,11 @@
         <button class="control-btn shoot-btn" id="shootBtn">🔥</button>
     </div>
 
-    <!-- Touch controls - invisible -->
-    <div id="touchControls"></div>
+    <!-- New intuitive touch controls - split screen -->
+    <div id="touchControls">
+        <div class="touch-zone-indicator left" id="zoneLeft">◀ MOVER</div>
+        <div class="touch-zone-indicator right" id="zoneRight">💥 DISPARAR<br><span style="font-size:0.4em">🚀 Toca enemigo</span></div>
+    </div>
 
     <div id="overlay">
         <h1>🚀 NAVE ESTELAR</h1>
@@ -285,8 +312,8 @@
             <div><span class="stat-label">Kills:</span> <span class="stat-value" id="finalKills">0</span></div>
         </div>
         <p style="margin-top:30px;opacity:0.7;font-size:0.9em;text-align:center;">
-            📱 MÓVIL: Izquierda=IZQ, Derecha=TAP<br>
-            🎯 ¡Toca enemigo para lanzar cohete! 🚀<br>
+            📱 MÓVIL: Izquierda=IZQ, Derecha=TAP para disparar<br>
+            🎯 ¡Toca cerca de un enemigo para lanzar cohete! 🚀<br>
             🖥️ PC: Flechas + Espacio
         </p>
     </div>
@@ -308,8 +335,9 @@
     let gameRunning = false;
     let score = 0;
     let highScore = localStorage.getItem('naveEstelarHighScore') || 0;
-    let lives = 3;
+    let lives = 999; // 🌀 MODO DIOS ACTIVADO
     let health = 100;
+    let godMode = true; // 🌀 INVENCIBLE
     let level = 1;
     let difficulty = 'normal';
     let kills = 0;
@@ -466,7 +494,7 @@
         }
         
         hit(damage) {
-            if (this.invincible > 0 || activePowerUps.shield > 0) return;
+            if (this.invincible > 0 || activePowerUps.shield > 0 || godMode) return;
             
             health -= damage;
             createParticles(this.x, this.y, 20, '#ff6b6b');
@@ -751,8 +779,6 @@
         
         document.getElementById('overlay').style.display = 'flex';
         document.getElementById('gameStats').style.display = 'block';
-        document.getElementById('touchControls').classList.remove('active');
-        document.getElementById('touchControls').style.pointerEvents = 'none';
         document.getElementById('finalScore').textContent = score;
         document.getElementById('finalLevel').textContent = level;
         document.getElementById('finalKills').textContent = kills;
@@ -784,12 +810,6 @@
         
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('gameStats').style.display = 'none';
-        
-        // Activate touch controls on mobile
-        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-            document.getElementById('touchControls').classList.add('active');
-            document.getElementById('touchControls').style.pointerEvents = 'auto';
-        }
         
         gameRunning = true;
         gameLoop();
@@ -955,8 +975,8 @@
     
     // New intuitive touch controls - split screen: move + aim & shoot enemies
     const touchControls = document.getElementById('touchControls');
-    
-    
+    const zoneLeftEl = document.getElementById('zoneLeft');
+    const zoneRightEl = document.getElementById('zoneRight');
     let leftTouch = null;
     let rightTouch = null;
     let isLeftTouching = false;
@@ -991,11 +1011,11 @@
             if (x < screenWidth / 2) {
                 leftTouch = touch.identifier;
                 isLeftTouching = true;
-                
+                zoneLeftEl.classList.add('active');
             } else {
                 rightTouch = touch.identifier;
                 isRightTouching = true;
-                
+                zoneRightEl.classList.add('active');
             }
         }
     });
@@ -1075,8 +1095,8 @@
     }
     
     // Touch start
-    
-    
+    const zoneLeftEl = document.getElementById('zoneLeft');
+    const zoneRightEl = document.getElementById('zoneRight');
     
     touchControls.addEventListener('touchstart', (e) => {
         e.preventDefault();
@@ -1088,11 +1108,11 @@
             if (x < screenWidth / 2) {
                 leftTouch = touch.identifier;
                 isLeftTouching = true;
-                
+                zoneLeftEl.classList.add('active');
             } else {
                 rightTouch = touch.identifier;
                 isRightTouching = true;
-                
+                zoneRightEl.classList.add('active');
             }
         }
     });
@@ -1127,11 +1147,11 @@
             if (x < screenWidth / 2) {
                 leftTouch = null;
                 isLeftTouching = false;
-                
+                zoneLeftEl.classList.remove('active');
             } else {
                 rightTouch = null;
                 isRightTouching = false;
-                
+                zoneRightEl.classList.remove('active');
                 
                 // Single tap on right side = shoot
                 touchShoot = true;
@@ -1144,8 +1164,8 @@
         isLeftTouching = false;
         isRightTouching = false;
         touchShoot = false;
-        
-        
+        zoneLeftEl.classList.remove('active');
+        zoneRightEl.classList.remove('active');
     });
     
     // Update player to follow touch zones
