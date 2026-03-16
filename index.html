@@ -84,7 +84,7 @@
         }
         
         /* Mobile Controls */
-        /* Touch controls - Full screen gesture (NEW INTUITIVE) */
+        /* Touch controls - Split screen (left/right) */
         #touchControls {
             position: absolute;
             top: 0;
@@ -95,23 +95,33 @@
             display: none;
         }
         
-        /* Visual feedback */
-        .touch-feedback {
+        /* Visual zones */
+        .touch-zone-indicator {
             position: absolute;
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(0,255,204,0.3) 0%, transparent 70%);
-            transform: translate(-50%, -50%);
+            top: 50%;
+            transform: translateY(-50%);
+            width: 45%;
+            height: 60%;
+            border: 2px dashed rgba(255,255,255,0.1);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            color: rgba(255,255,255,0.15);
             pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.1s;
+            transition: all 0.2s;
         }
-        .touch-feedback.active {
-            opacity: 1;
+        .touch-zone-indicator.left {
+            left: 2%;
         }
-        .touch-feedback.shooting {
-            background: radial-gradient(circle, rgba(255,107,107,0.4) 0%, transparent 70%);
+        .touch-zone-indicator.right {
+            right: 2%;
+        }
+        .touch-zone-indicator.active {
+            background: rgba(0,255,204,0.1);
+            border-color: rgba(0,255,204,0.5);
+            color: rgba(0,255,204,0.5);
         }
         
         /* Show on mobile */
@@ -281,9 +291,10 @@
         <button class="control-btn shoot-btn" id="shootBtn">🔥</button>
     </div>
 
-    <!-- New intuitive touch controls -->
+    <!-- New intuitive touch controls - split screen -->
     <div id="touchControls">
-        <div class="touch-feedback" id="touchFeedback"></div>
+        <div class="touch-zone-indicator left" id="zoneLeft">◀ IZQUIERDA</div>
+        <div class="touch-zone-indicator right" id="zoneRight">DERECHA ▶<br><span style="font-size:0.5em">TAP = 💥</span></div>
     </div>
 
     <div id="overlay">
@@ -944,102 +955,102 @@
         keys[e.key] = false;
     });
     
-    // New intuitive touch controls - ship follows finger
+    // New intuitive touch controls - split screen: left/right move, tap to shoot
     const touchControls = document.getElementById('touchControls');
-    const touchFeedback = document.getElementById('touchFeedback');
-    let touchX = null;
-    let isTouching = false;
+    let leftTouch = null;
+    let rightTouch = null;
+    let isLeftTouching = false;
+    let isRightTouching = false;
+    let lastTap = 0;
     
     // Show touch controls on mobile
     if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         document.getElementById('controls').style.display = 'none';
     }
     
-    function updateTouchFeedback(x, y, shooting) {
-        touchFeedback.style.left = x + 'px';
-        touchFeedback.style.top = y + 'px';
-        touchFeedback.classList.add('active');
-        if (shooting) {
-            touchFeedback.classList.add('shooting');
-        } else {
-            touchFeedback.classList.remove('shooting');
-        }
-    }
+    // Touch start
+    const zoneLeftEl = document.getElementById('zoneLeft');
+    const zoneRightEl = document.getElementById('zoneRight');
     
-    function hideTouchFeedback() {
-        touchFeedback.classList.remove('active', 'shooting');
-    }
-    
-    // Touch start - set target position
     touchControls.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        const touch = e.touches[0];
-        touchX = touch.clientX;
-        touchY = touch.clientY;
-        isTouching = true;
         
-        // Check if touching center area for shooting
-        const centerZone = window.innerWidth * 0.3;
-        const isCenter = touchX > centerZone && touchX < (window.innerWidth - centerZone);
-        if (isCenter) {
-            touchShoot = true;
-            updateTouchFeedback(touchX, touchY, true);
-        } else {
-            updateTouchFeedback(touchX, touchY, false);
+        for (let touch of e.touches) {
+            const x = touch.clientX;
+            const screenWidth = window.innerWidth;
+            
+            if (x < screenWidth / 2) {
+                leftTouch = touch.identifier;
+                isLeftTouching = true;
+                zoneLeftEl.classList.add('active');
+            } else {
+                rightTouch = touch.identifier;
+                isRightTouching = true;
+                zoneRightEl.classList.add('active');
+            }
         }
     });
     
-    // Touch move - update target position
+    // Touch move
     touchControls.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        if (!isTouching) return;
         
-        const touch = e.touches[0];
-        touchX = touch.clientX;
-        touchY = touch.clientY;
+        isLeftTouching = false;
+        isRightTouching = false;
         
-        // Check center for shooting
-        const centerZone = window.innerWidth * 0.3;
-        const isCenter = touchX > centerZone && touchX < (window.innerWidth - centerZone);
-        touchShoot = isCenter;
-        updateTouchFeedback(touchX, touchY, isCenter);
+        for (let touch of e.changedTouches) {
+            const x = touch.clientX;
+            const screenWidth = window.innerWidth;
+            
+            if (x < screenWidth / 2) {
+                isLeftTouching = true;
+            } else {
+                isRightTouching = true;
+            }
+        }
     });
     
     // Touch end
     touchControls.addEventListener('touchend', (e) => {
         e.preventDefault();
-        isTouching = false;
-        touchX = null;
-        touchShoot = false;
-        hideTouchFeedback();
+        
+        for (let touch of e.changedTouches) {
+            const x = touch.clientX;
+            const screenWidth = window.innerWidth;
+            
+            if (x < screenWidth / 2) {
+                leftTouch = null;
+                isLeftTouching = false;
+                zoneLeftEl.classList.remove('active');
+            } else {
+                rightTouch = null;
+                isRightTouching = false;
+                zoneRightEl.classList.remove('active');
+                
+                // Single tap on right side = shoot
+                touchShoot = true;
+                setTimeout(() => touchShoot = false, 150);
+            }
+        }
     });
     
     touchControls.addEventListener('touchcancel', (e) => {
-        isTouching = false;
-        touchX = null;
+        isLeftTouching = false;
+        isRightTouching = false;
         touchShoot = false;
-        hideTouchFeedback();
+        zoneLeftEl.classList.remove('active');
+        zoneRightEl.classList.remove('active');
     });
     
-    // Update player to follow touch
+    // Update player to follow touch zones
     const originalPlayerUpdate = Player.prototype.update;
     Player.prototype.update = function() {
-        // Touch control - move towards touch position
-        if (touchX !== null && isTouching) {
-            const diff = touchX - this.x;
-            const moveSpeed = this.speed + (activePowerUps.speed > 0 ? 3 : 0);
-            
-            if (Math.abs(diff) > 10) {
-                this.x += Math.sign(diff) * Math.min(Math.abs(diff), moveSpeed);
-            }
-        } else {
-            // Keyboard controls
-            if (keys['ArrowLeft'] || keys['a']) {
-                this.x -= this.speed;
-            }
-            if (keys['ArrowRight'] || keys['d']) {
-                this.x += this.speed;
-            }
+        // Touch control
+        if (isLeftTouching) {
+            this.x -= this.speed + (activePowerUps.speed > 0 ? 3 : 0);
+        }
+        if (isRightTouching) {
+            this.x += this.speed + (activePowerUps.speed > 0 ? 3 : 0);
         }
         
         // Boundaries
