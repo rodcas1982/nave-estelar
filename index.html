@@ -84,7 +84,7 @@
         }
         
         /* Mobile Controls */
-        /* Touch controls - invisible, just work */
+        /* Touch controls - invisible, only when game running */
         #touchControls {
             position: absolute;
             top: 0;
@@ -93,11 +93,16 @@
             height: 100%;
             z-index: 40;
             display: none;
+            pointer-events: none;
+        }
+        
+        #touchControls.active {
+            display: block;
+            pointer-events: auto;
         }
         
         /* Show on mobile - but hide indicators */
         @media (max-width: 768px), (pointer: coarse) {
-            #touchControls { display: block; }
             #controls { display: none; }
         }
         
@@ -747,6 +752,7 @@
         
         document.getElementById('overlay').style.display = 'flex';
         document.getElementById('gameStats').style.display = 'block';
+        document.getElementById('touchControls').classList.remove('active');
         document.getElementById('finalScore').textContent = score;
         document.getElementById('finalLevel').textContent = level;
         document.getElementById('finalKills').textContent = kills;
@@ -778,6 +784,11 @@
         
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('gameStats').style.display = 'none';
+        
+        // Activate touch controls on mobile
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            document.getElementById('touchControls').classList.add('active');
+        }
         
         gameRunning = true;
         gameLoop();
