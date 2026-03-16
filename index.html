@@ -119,7 +119,7 @@
             align-items: center;
             justify-content: center;
             color: white;
-            z-index: 100;
+            z-index: 200;
         }
         #overlay h1 {
             font-size: 3em;
@@ -753,6 +753,7 @@
         document.getElementById('overlay').style.display = 'flex';
         document.getElementById('gameStats').style.display = 'block';
         document.getElementById('touchControls').classList.remove('active');
+        document.getElementById('touchControls').style.pointerEvents = 'none';
         document.getElementById('finalScore').textContent = score;
         document.getElementById('finalLevel').textContent = level;
         document.getElementById('finalKills').textContent = kills;
@@ -788,6 +789,7 @@
         // Activate touch controls on mobile
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
             document.getElementById('touchControls').classList.add('active');
+            document.getElementById('touchControls').style.pointerEvents = 'auto';
         }
         
         gameRunning = true;
