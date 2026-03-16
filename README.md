@@ -1,67 +1,76 @@
-# 🚀 Nave Estelar
+# 🚀 Nave Estelar - Space Shooter Ultra
 
-Juego de naves espaciales tipo arcade para web y móvil.
+![Game Preview](https://img.shields.io/badge/Version-2.0-blue)
+![Platforms](https://img.shields.io/badge/Platforms-PC%20%7C%20Mobile%20%7C%20Tablet-green)
 
-## 🎮 Jugar
+**Nave Estelar** es un juego de naves espaciales tipo arcade ahora con efectos visuales ultra, logros y power-ups!
 
-**URL:** https://rodcas1982.github.io/nave-estelar/
+## 🎮 Cómo Jugar
 
-### Controles
+### 🖥️ PC
+- **Flechas** o **A/D**: Mover nave
+- **Espacio**: Disparar
 
-**Móvil:**
-- Botones táctiles: ◀ izquierda, derecha ▶
-- Botón 🔥 para disparar
+### 📱 Móvil/Tablet
+- **Botones táctiles**: ◀ ▶ para mover
+- **🔥**: Botón disparar
 
-**PC:**
-- Flechas o A/D para mover
-- Espacio para disparar
+## ✨ Nuevas Features v2.0
 
-## 🎯 Cómo Jugar
+### 🎨 Gráficos Ultra
+- Efectos de partículas en explosiones
+- engine glow en la nave
+- Escudo protector con animación
+- Fondo de estrellas parallax
+- UI moderna con tipografía futurista
 
-1. Selecciona el nivel de dificultad
-2. Evita los asteroides 🪨
-3. ¡Cuidado! A partir de 500 puntos aparecen naves enemigas rojas que disparan 🚨
-4. Consigue la puntuación más alta
+### ⚡ Power-ups
+| Icono | Efecto |
+|-------|--------|
+| 🛡️ | Escudo - Invencibilidad 5s |
+| ⚡ | Doble disparo |
+| 🔥 | Fuego rápido |
+| 💨 | Velocidad extra |
 
-## 📊 Puntuación
+### 🏆 Logros
+- 🎯 Primera Muerte
+- 🔥 Combo x5 / x10
+- ⭐ 1000 / 5000 Puntos
+- 🛡️ Sin Daño
 
-| Enemigo | Puntos |
-|---------|--------|
-| Asteroide | 100 |
-| Nave enemiga | 250 |
+### 🎯 Gameplay
+- 3 niveles de dificultad
+- Asteroides y naves enemigas
+- Sistema de combos
+- Barra de salud
+- Vidas extra
 
-## 🛠️ Tecnología
-
+## 🛠️ Tech Stack
 - HTML5 Canvas
-- JavaScript vanilla
-- CSS3
+- JavaScript Vanilla
+- CSS3 Animations
 - GitHub Pages
 
 ## 📁 Estructura
-
 ```
 nave-estelar/
-├── index.html          # Juego completo (todo en uno)
-├── docs/
-│   └── PROJECT_CHARTER.md  # Documentación del proyecto
-├── README.md           # Este archivo
-└── .git/               # Control de versiones
+├── index.html    # Juego completo
+└── README.md     # Este archivo
 ```
 
-## 🚀 Despliegue
-
-El juego se despliega automáticamente a GitHub Pages cuando se hace push a main.
-
+## 🚀 Deploy
 ```bash
 git add .
-git commit -m "Actualización"
+git commit -m "Nave Estelar v2.0 - Efectos Ultra"
 git push origin main
 ```
 
-## 📝 Licencia
-
-MIT License - Libre para usar y modificar.
+## 📋 To-Do
+- [ ] Música y efectos de sonido
+- [ ] Niveles con boss
+- [ ] Tienda de mejoras
+- [ ] Leaderboard online
 
 ---
 
-¡Diviértete! 🎮🌟
+**¡Diviértete!** 🎮🌟
