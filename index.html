@@ -973,6 +973,35 @@
         keys[e.key] = false;
     });
     
+    // Touch controls - only enable when game is running
+    const touchControls = document.getElementById('touchControls');
+    
+    function enableTouchControls() {
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            touchControls.style.display = 'flex';
+        }
+    }
+    
+    function disableTouchControls() {
+        touchControls.style.display = 'none';
+    }
+    
+    // Enable/disable based on game state
+    const originalStartGame = window.startGame;
+    window.startGame = function(diff) {
+        enableTouchControls();
+        originalStartGame(diff);
+    };
+    
+    const originalGameOver = window.gameOver;
+    window.gameOver = function() {
+        disableTouchControls();
+        originalGameOver();
+    };
+    
+    // Initialize
+    disableTouchControls();
+    
     // New intuitive touch controls - split screen: move + aim & shoot enemies
     const touchControls = document.getElementById('touchControls');
     const zoneLeftEl = document.getElementById('zoneLeft');
