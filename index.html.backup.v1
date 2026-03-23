@@ -276,7 +276,6 @@
     </div>
     <div id="lives">❤️❤️❤️</div>
     <div id="healthBar"><div id="healthFill"></div></div>
-    <div id="bossHealthBar" style="display:none; position:absolute; bottom:80px; left:50%; transform:translateX(-50%); z-index:15;"></div>
     
     <div id="powerUpIndicator"></div>
     <div id="achievements"></div>
@@ -360,154 +359,6 @@
     let powerUps = [];
     let stars = [];
     let enemyBullets = [];
-    let boss = null;
-
-    // Explosion effects array
-    let explosions = [];
-
-    // Background parallax
-    let bgOffset = 0;
-    
-    // ============ ASSET PRELOADING ============
-    // Preload images for game assets (fallback to canvas drawing if not available)
-    const assets = {};
-    function preloadAssets(callback) {
-        const assetList = [
-            { name: 'logo', src: 'assets/logo.png' },
-            { name: 'enemy', src: 'assets/enemy_ship.png' },
-            { name: 'background', src: 'assets/background_space.png' },
-            { name: 'explosion', src: 'assets/explosion.png' },
-            { name: 'shield', src: 'assets/powerup_shield.png' },
-            { name: 'doubleShot', src: 'assets/powerup_doubleshot.png' },
-            { name: 'speed', src: 'assets/powerup_speed.png' },
-            { name: 'life', src: 'assets/powerup_life.png' }
-        ];
-        let loaded = 0;
-        assetList.forEach(item => {
-            const img = new Image();
-            img.onload = () => {
-                assets[item.name] = img;
-                loaded++;
-                if (loaded === assetList.length) callback();
-            };
-            img.onerror = () => {
-                // Asset failed to load, will use canvas fallback
-                assets[item.name] = null;
-                loaded++;
-                if (loaded === assetList.length) callback();
-            };
-            img.src = item.src;
-        });
-    }
-    
-    // ============ SOUND SYSTEM (Web Audio API) ============
-    let audioCtx = null;
-    
-    function initAudio() {
-        try {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        } catch (e) {
-            console.warn('Web Audio API not supported');
-        }
-    }
-    
-    function playSound(type) {
-        if (!audioCtx) return;
-        try {
-            // Resume context if suspended (autoplay policy)
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            
-            const now = audioCtx.currentTime;
-            
-            switch (type) {
-                case 'shoot':
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(880, now);
-                    osc.frequency.exponentialRampToValueAtTime(220, now + 0.1);
-                    gain.gain.setValueAtTime(0.1, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-                    osc.start(now);
-                    osc.stop(now + 0.1);
-                    break;
-                    
-                case 'explosion':
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(150, now);
-                    osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
-                    gain.gain.setValueAtTime(0.2, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-                    osc.start(now);
-                    osc.stop(now + 0.3);
-                    // Add noise burst
-                    const noise = audioCtx.createBufferSource();
-                    const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.2, audioCtx.sampleRate);
-                    const data = noiseBuffer.getChannelData(0);
-                    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-                    noise.buffer = noiseBuffer;
-                    const noiseGain = audioCtx.createGain();
-                    noise.connect(noiseGain);
-                    noiseGain.connect(audioCtx.destination);
-                    noiseGain.gain.setValueAtTime(0.15, now);
-                    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-                    noise.start(now);
-                    break;
-                    
-                case 'powerup':
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(440, now);
-                    osc.frequency.setValueAtTime(660, now + 0.1);
-                    osc.frequency.setValueAtTime(880, now + 0.2);
-                    gain.gain.setValueAtTime(0.15, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-                    osc.start(now);
-                    osc.stop(now + 0.35);
-                    break;
-                    
-                case 'hit':
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(200, now);
-                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
-                    gain.gain.setValueAtTime(0.15, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-                    osc.start(now);
-                    osc.stop(now + 0.15);
-                    break;
-                    
-                case 'gameover':
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(440, now);
-                    osc.frequency.setValueAtTime(330, now + 0.3);
-                    osc.frequency.setValueAtTime(220, now + 0.6);
-                    osc.frequency.setValueAtTime(110, now + 0.9);
-                    gain.gain.setValueAtTime(0.2, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-                    osc.start(now);
-                    osc.stop(now + 1.2);
-                    break;
-                    
-                case 'bossDefeat':
-                    // Victory fanfare
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(523, now);
-                    osc.frequency.setValueAtTime(659, now + 0.15);
-                    osc.frequency.setValueAtTime(784, now + 0.3);
-                    osc.frequency.setValueAtTime(1047, now + 0.45);
-                    gain.gain.setValueAtTime(0.15, now);
-                    gain.gain.setValueAtTime(0.15, now + 0.5);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-                    osc.start(now);
-                    osc.stop(now + 0.8);
-                    break;
-            }
-        } catch (e) {
-            console.warn('Sound playback error:', e);
-        }
-    }
     
     // Controls
     let keys = {};
@@ -582,12 +433,11 @@
                 bullets.push(new Bullet(this.x - 15, this.y - 10));
                 bullets.push(new Bullet(this.x + 15, this.y - 10));
             }
-            playSound('shoot');
         }
         
         draw() {
             ctx.save();
-
+            
             // Shield effect
             if (activePowerUps.shield > 0) {
                 ctx.beginPath();
@@ -598,41 +448,36 @@
                 ctx.fillStyle = 'rgba(0, 255, 204, 0.1)';
                 ctx.fill();
             }
-
+            
             // Invincibility flicker
             if (this.invincible > 0 && Math.floor(this.invincible / 5) % 2 === 0) {
                 ctx.globalAlpha = 0.5;
             }
-
-            // Try to use player image
-            if (assets['logo'] && assets['logo'].complete) {
-                ctx.drawImage(assets['logo'], this.x - 25, this.y - 30, 50, 60);
-            } else {
-                // Ship body fallback
-                ctx.fillStyle = '#00ffcc';
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y - 30);
-                ctx.lineTo(this.x - 25, this.y + 25);
-                ctx.lineTo(this.x, this.y + 10);
-                ctx.lineTo(this.x + 25, this.y + 25);
-                ctx.closePath();
-                ctx.fill();
-
-                // Cockpit
-                ctx.fillStyle = '#ffd93d';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y - 5, 8, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Engine glow
-                ctx.fillStyle = '#ff6b6b';
-                ctx.beginPath();
-                ctx.moveTo(this.x - 8, this.y + 25);
-                ctx.lineTo(this.x, this.y + 35 + Math.random() * 10);
-                ctx.lineTo(this.x + 8, this.y + 25);
-                ctx.fill();
-            }
-
+            
+            // Ship body
+            ctx.fillStyle = '#00ffcc';
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y - 30);
+            ctx.lineTo(this.x - 25, this.y + 25);
+            ctx.lineTo(this.x, this.y + 10);
+            ctx.lineTo(this.x + 25, this.y + 25);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Cockpit
+            ctx.fillStyle = '#ffd93d';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y - 5, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Engine glow
+            ctx.fillStyle = '#ff6b6b';
+            ctx.beginPath();
+            ctx.moveTo(this.x - 8, this.y + 25);
+            ctx.lineTo(this.x, this.y + 35 + Math.random() * 10);
+            ctx.lineTo(this.x + 8, this.y + 25);
+            ctx.fill();
+            
             ctx.restore();
         }
         
@@ -641,7 +486,6 @@
             
             health -= damage;
             createParticles(this.x, this.y, 20, '#ff6b6b');
-            playSound('hit');
             
             if (health <= 0) {
                 lives--;
@@ -709,12 +553,9 @@
         
         draw() {
             ctx.save();
-
-            if (assets['enemy'] && assets['enemy'].complete) {
-                // Usar imagen del enemigo
-                ctx.drawImage(assets['enemy'], this.x - 20, this.y - 20, 40, 40);
-            } else if (this.type === 'asteroid') {
-                // Asteroid fallback
+            
+            if (this.type === 'asteroid') {
+                // Asteroid
                 ctx.fillStyle = '#666';
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
@@ -724,7 +565,7 @@
                 ctx.arc(this.x - 5, this.y - 5, 8, 0, Math.PI * 2);
                 ctx.fill();
             } else {
-                // Fighter ship fallback
+                // Fighter ship
                 ctx.fillStyle = '#ff4444';
                 ctx.beginPath();
                 ctx.moveTo(this.x, this.y + 20);
@@ -733,14 +574,14 @@
                 ctx.lineTo(this.x + 20, this.y - 15);
                 ctx.closePath();
                 ctx.fill();
-
+                
                 // Engine
                 ctx.fillStyle = '#ff8800';
                 ctx.beginPath();
                 ctx.arc(this.x, this.y - 20, 5, 0, Math.PI * 2);
                 ctx.fill();
             }
-
+            
             ctx.restore();
         }
     }
@@ -768,164 +609,7 @@
         }
     }
     
-    // ============ BOSS CLASS ============
-    class Boss {
-        constructor(level) {
-            this.x = canvas.width / 2;
-            this.y = -120;
-            this.targetY = 120;
-            this.width = 120;
-            this.height = 100;
-            this.maxHealth = 500 + level * 200;
-            this.health = this.maxHealth;
-            this.speed = 1.5;
-            this.phase = 'entering'; // entering, fighting, defeated
-            this.shootTimer = 0;
-            this.moveDirection = 1;
-            this.moveTimer = 0;
-            this.bossLevel = level;
-        }
-        
-        update() {
-            if (this.phase === 'entering') {
-                this.y += this.speed;
-                if (this.y >= this.targetY) {
-                    this.y = this.targetY;
-                    this.phase = 'fighting';
-                }
-                return;
-            }
-            
-            if (this.phase === 'defeated') {
-                this.y -= this.speed * 2;
-                return;
-            }
-            
-            // Movement
-            this.moveTimer++;
-            if (this.moveTimer > 60) {
-                this.moveTimer = 0;
-                this.moveDirection *= -1;
-            }
-            this.x += this.moveDirection * 2;
-            this.x = Math.max(this.width / 2, Math.min(canvas.width - this.width / 2, this.x));
-            
-            // Shooting
-            this.shootTimer--;
-            if (this.shootTimer <= 0) {
-                // Triple shot spread
-                enemyBullets.push(new EnemyBullet(this.x, this.y + 40));
-                enemyBullets.push(new EnemyBullet(this.x - 30, this.y + 40));
-                enemyBullets.push(new EnemyBullet(this.x + 30, this.y + 40));
-                this.shootTimer = 40 + Math.floor(Math.random() * 30);
-            }
-        }
-        
-        draw() {
-            // Draw boss asset if available, else fallback to canvas
-            if (assets['enemy']) {
-                ctx.drawImage(assets['enemy'], this.x - 60, this.y - 50, 120, 100);
-            } else {
-                // Boss body - large enemy ship
-                ctx.fillStyle = '#8b0000';
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y + 50);
-                ctx.lineTo(this.x - 60, this.y - 30);
-                ctx.lineTo(this.x - 20, this.y - 10);
-                ctx.lineTo(this.x, this.y - 25);
-                ctx.lineTo(this.x + 20, this.y - 10);
-                ctx.lineTo(this.x + 60, this.y - 30);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Wings
-                ctx.fillStyle = '#660000';
-                ctx.beginPath();
-                ctx.moveTo(this.x - 20, this.y);
-                ctx.lineTo(this.x - 70, this.y + 20);
-                ctx.lineTo(this.x - 70, this.y - 10);
-                ctx.closePath();
-                ctx.fill();
-                ctx.beginPath();
-                ctx.moveTo(this.x + 20, this.y);
-                ctx.lineTo(this.x + 70, this.y + 20);
-                ctx.lineTo(this.x + 70, this.y - 10);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Cockpit
-                ctx.fillStyle = '#ff0000';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, 15, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#ff6666';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y - 5, 7, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            
-            // Health bar
-            const barWidth = 200;
-            const barHeight = 12;
-            const barX = canvas.width / 2 - barWidth / 2;
-            const barY = canvas.height - 60;
-            
-            // Background
-            ctx.fillStyle = 'rgba(0,0,0,0.7)';
-            ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
-            
-            // Health fill
-            const healthPercent = this.health / this.maxHealth;
-            const gradient = ctx.createLinearGradient(barX, 0, barX + barWidth, 0);
-            gradient.addColorStop(0, '#ff0000');
-            gradient.addColorStop(0.5, '#ff6600');
-            gradient.addColorStop(1, '#00ff00');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
-            
-            // Border
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(barX, barY, barWidth, barHeight);
-            
-            // Label
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 12px Orbitron, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(`BOSS - Nivel ${this.bossLevel}`, canvas.width / 2, barY - 8);
-            ctx.fillText(`${Math.ceil(this.health)} / ${this.maxHealth}`, canvas.width / 2, barY + barHeight + 14);
-        }
-        
-        hit(damage) {
-            this.health -= damage;
-            createParticles(this.x, this.y, 10, '#ff6600');
-            
-            if (this.health <= 0) {
-                this.phase = 'defeated';
-                // Massive explosion
-                for (let i = 0; i < 5; i++) {
-                    setTimeout(() => {
-                        createParticles(
-                            this.x + (Math.random() - 0.5) * 80,
-                            this.y + (Math.random() - 0.5) * 60,
-                            30, '#ff6600'
-                        );
-                        playSound('explosion');
-                    }, i * 150);
-                }
-                
-                // Reward: points + rapid fire
-                score += 1000 * this.bossLevel;
-                activePowerUps.rapidFire = 600; // 10 seconds
-                playSound('bossDefeat');
-                
-                // Hide boss after a moment
-                setTimeout(() => {
-                    boss = null;
-                }, 800);
-            }
-        }
-    }
+    // ============ PARTICLE CLASS ============
     class Particle {
         constructor(x, y, color) {
             this.x = x;
@@ -978,7 +662,13 @@
                 rapidFire: '#ff6b6b',
                 speed: '#a855f7'
             };
-
+            const icons = {
+                shield: '🛡️',
+                doubleShot: '⚡',
+                rapidFire: '🔥',
+                speed: '💨'
+            };
+            
             ctx.save();
             ctx.fillStyle = colors[this.type];
             ctx.shadowBlur = 20;
@@ -986,25 +676,10 @@
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
             ctx.fill();
-
-            // Try to use image, fallback to emoji
-            const assetName = this.type === 'doubleShot' ? 'doubleShot' :
-                              this.type === 'rapidFire' ? 'life' :
-                              this.type;
-            if (assets[assetName] && assets[assetName].complete) {
-                ctx.drawImage(assets[assetName], this.x - 15, this.y - 15, 30, 30);
-            } else {
-                const icons = {
-                    shield: '🛡️',
-                    doubleShot: '⚡',
-                    rapidFire: '🔥',
-                    speed: '💨'
-                };
-                ctx.font = '16px Arial';
-                ctx.textAlign = 'center';
-                ctx.shadowBlur = 0;
-                ctx.fillText(icons[this.type], this.x, this.y + 6);
-            }
+            
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(icons[this.type], this.x, this.y + 6);
             ctx.restore();
         }
     }
@@ -1018,15 +693,7 @@
     
     // ============ SPAWN ENEMY ============
     let spawnTimer = 0;
-    let bossSpawnedThisLevel = false;
     function spawnEnemy() {
-        // Spawn boss every 5 levels (if not already spawned)
-        if (level % 5 === 0 && !bossSpawnedThisLevel && !boss && score >= level * 2000 - 100) {
-            boss = new Boss(level);
-            bossSpawnedThisLevel = true;
-            return;
-        }
-        
         spawnTimer--;
         if (spawnTimer <= 0) {
             enemies.push(new Enemy());
@@ -1087,7 +754,6 @@
     // ============ GAME OVER ============
     function gameOver() {
         gameRunning = false;
-        playSound('gameover');
         
         if (score > highScore) {
             highScore = score;
@@ -1124,13 +790,9 @@
         activePowerUps = { shield: 0, doubleShot: 0, rapidFire: 0, speed: 0 };
         
         initStars();
-        initAudio(); // Initialize audio system
         
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('gameStats').style.display = 'none';
-        
-        bossSpawnedThisLevel = false;
-        boss = null;
         
         gameRunning = true;
         gameLoop();
@@ -1143,37 +805,23 @@
         // Clear
         ctx.fillStyle = '#050510';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Background con parallax
-        if (assets['background'] && assets['background'].complete) {
-            bgOffset = (bgOffset + 1.5) % canvas.height;
-            // Dibujar imagen dos veces para efecto continuo de parallax
-            ctx.drawImage(assets['background'], 0, bgOffset - canvas.height, canvas.width, canvas.height);
-            ctx.drawImage(assets['background'], 0, bgOffset, canvas.width, canvas.height);
-        } else {
-            // Fallback: dibujar estrellas
-            stars.forEach(star => {
-                star.y += star.speed;
-                if (star.y > canvas.height) {
-                    star.y = 0;
-                    star.x = Math.random() * canvas.width;
-                }
-                ctx.fillStyle = `rgba(255,255,255,${star.brightness})`;
-                ctx.beginPath();
-                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
+        
+        // Draw stars
+        stars.forEach(star => {
+            star.y += star.speed;
+            if (star.y > canvas.height) {
+                star.y = 0;
+                star.x = Math.random() * canvas.width;
+            }
+            ctx.fillStyle = `rgba(255,255,255,${star.brightness})`;
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
         
         // Update player
         player.update();
         player.draw();
-        
-        // Update and draw Boss
-        if (boss) {
-            boss.update();
-            boss.draw();
-        }
         
         // Spawn enemies
         spawnEnemy();
@@ -1207,8 +855,7 @@
                     createParticles(b.x, b.y, 5, '#00ffcc');
                     
                     if (e.health <= 0) {
-                        // Enemy destroyed - spawn explosion
-                        explosions.push({ x: e.x, y: e.y, life: 20, maxLife: 20 });
+                        // Enemy destroyed
                         createParticles(e.x, e.y, 15, e.type === 'asteroid' ? '#666' : '#ff4444');
                         
                         // Score
@@ -1234,34 +881,15 @@
                         }
                         
                         enemies.splice(ei, 1);
-                        playSound('explosion');
                         
                         // Level up
                         if (score > level * 2000) {
                             level++;
-                            bossSpawnedThisLevel = false; // Reset for new level
                         }
                     }
                 }
             });
         });
-        
-        // Boss collision (bullets vs boss)
-        if (boss && boss.phase === 'fighting') {
-            bullets.forEach((b, bi) => {
-                if (Math.abs(b.x - boss.x) < 60 && Math.abs(b.y - boss.y) < 50) {
-                    bullets.splice(bi, 1);
-                    boss.hit(20 + level * 2);
-                    createParticles(b.x, b.y, 8, '#ff6600');
-                    playSound('hit');
-                }
-            });
-            
-            // Player touching boss body
-            if (Math.abs(player.x - boss.x) < 80 && Math.abs(player.y - boss.y) < 70) {
-                player.hit(25);
-            }
-        }
         
         // Update enemy bullets
         enemyBullets = enemyBullets.filter(b => b.y < canvas.height + 20);
@@ -1287,7 +915,6 @@
                 activePowerUps[p.type] = 300; // 5 seconds
                 powerUps.splice(powerUps.indexOf(p), 1);
                 score += 50;
-                playSound('powerup');
             }
         });
         
@@ -1296,33 +923,6 @@
         particles.forEach(p => {
             p.update();
             p.draw();
-        });
-
-        // Draw explosions
-        explosions = explosions.filter(exp => exp.life > 0);
-        explosions.forEach(exp => {
-            exp.life--;
-            const scale = 1 + (1 - exp.life / exp.maxLife) * 0.5;
-            const alpha = exp.life / exp.maxLife;
-
-            if (assets['explosion'] && assets['explosion'].complete) {
-                ctx.save();
-                ctx.globalAlpha = alpha;
-                ctx.drawImage(
-                    assets['explosion'],
-                    exp.x - 20 * scale,
-                    exp.y - 20 * scale,
-                    40 * scale,
-                    40 * scale
-                );
-                ctx.restore();
-            } else {
-                // Fallback: partículas de explosión
-                ctx.fillStyle = `rgba(255,150,50,${alpha})`;
-                ctx.beginPath();
-                ctx.arc(exp.x, exp.y, 20 * scale * alpha, 0, Math.PI * 2);
-                ctx.fill();
-            }
         });
         
         // Combo timer
@@ -1365,11 +965,6 @@
     // Initialize
     initStars();
     updateUI();
-    preloadAssets(() => console.log('Assets loaded'));
-    
-    // Init audio on first interaction (autoplay policy)
-    document.addEventListener('click', () => initAudio(), { once: true });
-    document.addEventListener('touchstart', () => initAudio(), { once: true });
     </script>
 </body>
 </html>
