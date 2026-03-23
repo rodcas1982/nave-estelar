@@ -1,67 +1,63 @@
-# Nave Estelar - Guía para Claude Code
+# CLAUDE.md
 
-## Descripción del Proyecto
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Nave Estelar** es un juego arcade de naves espaciales construido completamente con tecnologías web estándar (HTML5, JavaScript Vanilla, CSS3). No tiene dependencias externas ni sistema de build — todo el juego vive en un único archivo `index.html`.
+## Running the Game
 
-## Estructura del Proyecto
-
-```
-nave-estelar/
-├── index.html              # Juego completo (HTML + CSS + JS en un solo archivo)
-├── index.html.backup.v*    # Backups de versiones anteriores
-├── README.md               # README del repositorio
-├── CLAUDE.md               # Este archivo — contexto para Claude Code
-├── spaceship_generated.png # Imagen de la nave
-├── assets/                 # Recursos visuales del juego
-│   ├── background_space.png
-│   ├── enemy_ship.png
-│   ├── explosion.png
-│   ├── logo.png
-│   ├── powerup_*.png
-│   └── PROJECT_CHARTER.md
-└── docs/                   # Documentación adicional
-    └── SETUP_CLAUDE_CODE.md
-```
-
-## Tecnologías
-
-- **HTML5 Canvas** — Motor de renderizado del juego
-- **JavaScript Vanilla** — Lógica del juego (sin frameworks)
-- **CSS3** — Estilos y animaciones de UI
-- **GitHub Pages** — Deploy automático desde rama `main`
-
-## Cómo Ejecutar el Juego Localmente
+No build system or dependencies. Open directly or use a local server to avoid CORS issues with image assets:
 
 ```bash
-# Opción 1: Abrir directamente en el navegador
-open index.html
-
-# Opción 2: Servidor local simple (recomendado para evitar CORS)
 python3 -m http.server 8080
-# Luego abrir: http://localhost:8080
+# then open http://localhost:8080
 ```
 
-## Convenciones de Commits
+## Architecture
 
-Este proyecto usa mensajes de commit con emojis descriptivos:
+The entire game is a single file: **`index.html`** (≈1375 lines). All HTML, CSS, and JavaScript live together. There is no module system, bundler, or package manager.
 
-- `🎨` — Cambios visuales / assets
-- `🚀` — Nueva versión o feature importante
-- `🐛` — Bug fix
-- `♻️` — Refactor
+### Code Sections
+
+The JavaScript is organized with `// ============ SECTION ============` markers. Key sections in order:
+
+| Section | Lines | Purpose |
+|---|---|---|
+| GAME CONFIG | ~313 | Canvas setup, game state variables, game object arrays |
+| ASSET PRELOADING | ~371 | Loads PNG sprites; falls back to canvas drawing if images fail |
+| SOUND SYSTEM | ~403 | Web Audio API synthesis — no external audio files |
+| PLAYER CLASS | ~539 | Movement, shooting, shield, engine glow, sprite drawing |
+| BULLET / ENEMY BULLET | ~660, ~748 | Projectile classes with `update()` + `draw()` |
+| ENEMY CLASS | ~684 | Enemy movement patterns, shooting behavior, sprite |
+| BOSS CLASS | ~771 | Multi-phase boss with health bar, attack patterns |
+| POWER-UP CLASS | ~959 | Four power-up types: shield, doubleShot, rapidFire, speed |
+| GAME LOOP | ~1140 | Main `requestAnimationFrame` loop — calls update/draw on all objects |
+| CONTROLS | ~1341 | Keyboard + touch event listeners |
+
+### Game State
+
+Global variables declared around line 326:
+- `gameRunning`, `score`, `lives`, `health`, `level`, `difficulty`, `kills`, `combo`
+- `activePowerUps` — object tracking remaining duration of each power-up
+- `achievements[]` — array of achievement objects with `unlocked` flag
+- `player`, `bullets[]`, `enemies[]`, `particles[]`, `powerUps[]`, `enemyBullets[]`, `boss`
+- High score persisted via `localStorage` key `naveEstelarHighScore`
+
+### Asset Loading Pattern
+
+`preloadAssets()` loads images into the `assets{}` object. Every `draw()` method checks `if (assets['key'] && assets['key'].complete)` before using sprites, and draws canvas shapes as fallback. This is the pattern to follow when adding new sprites.
+
+### Sound
+
+`playSound(type)` generates sounds procedurally with Web Audio API oscillators — no audio files. Add new sounds by adding a case to the switch in `playSound()` (~line 414).
+
+## Commit Conventions
+
+- `🎨` — visual/asset changes
+- `🚀` — new version or major feature
+- `🐛` — bug fix
+- `♻️` — refactor
 
 ## Deploy
 
-El juego se despliega automáticamente a GitHub Pages al hacer push a `main`:
+Push to `main` deploys automatically to GitHub Pages: `https://rodcas1982.github.io/nave-estelar/`
 
-```
-https://rodcas1982.github.io/nave-estelar/
-```
-
-## Contexto Importante para Modificaciones
-
-- Todo el código del juego está en `index.html` — buscar secciones con comentarios `/* --- SECCIÓN --- */`
-- Las funciones principales del game loop: `update()`, `draw()`, `gameLoop()`
-- Los backups `index.html.backup.v*` son referencias de versiones estables anteriores
-- Los assets en `assets/` son imágenes PNG usadas como sprites
+The `index.html.backup.v*` files are stable version snapshots — useful as rollback references.
