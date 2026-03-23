@@ -132,11 +132,12 @@
         /* Overlay */
         #overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(180deg, rgba(5,5,20,0.95) 0%, rgba(10,10,40,0.98) 100%);
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background:
+                radial-gradient(ellipse at 20% 30%, rgba(20,0,80,0.6) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 70%, rgba(0,40,100,0.5) 0%, transparent 55%),
+                radial-gradient(ellipse at 50% 50%, rgba(5,5,25,0.92) 0%, rgba(2,2,15,0.98) 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -144,24 +145,47 @@
             color: white;
             z-index: 100;
         }
+        #overlay::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 3px,
+                rgba(0,255,204,0.015) 3px,
+                rgba(0,255,204,0.015) 4px
+            );
+            pointer-events: none;
+        }
         #overlay h1 {
-            font-size: 3em;
-            background: linear-gradient(135deg, #00ffcc, #ff6b6b, #ffd93d);
+            font-size: 3.5em;
+            letter-spacing: 0.08em;
+            background: linear-gradient(160deg, #00ffee 0%, #00ccff 35%, #ff6b6b 65%, #ffd93d 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             text-shadow: none;
-            margin-bottom: 10px;
-            animation: glow 2s infinite;
+            margin-bottom: 6px;
+            animation: glow 2.5s ease-in-out infinite;
         }
         @keyframes glow {
-            0%, 100% { filter: drop-shadow(0 0 20px rgba(0,255,204,0.5)); }
-            50% { filter: drop-shadow(0 0 40px rgba(255,107,107,0.5)); }
+            0%, 100% { filter: drop-shadow(0 0 22px rgba(0,255,204,0.6)) drop-shadow(0 0 60px rgba(0,100,255,0.2)); }
+            50%       { filter: drop-shadow(0 0 35px rgba(255,107,107,0.6)) drop-shadow(0 0 80px rgba(255,80,0,0.2)); }
         }
         #overlay .subtitle {
-            font-size: 1.2em;
-            color: #aaa;
-            margin-bottom: 30px;
+            font-size: 0.85em;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: rgba(0,255,204,0.55);
+            margin-bottom: 8px;
+        }
+        #overlay .divider {
+            width: 260px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00ffcc, transparent);
+            margin: 18px 0 26px;
+            opacity: 0.5;
         }
         #overlay button {
             padding: 15px 50px;
@@ -291,8 +315,9 @@
     </div>
 
     <div id="overlay">
-        <h1>🚀 NAVE ESTELAR</h1>
+        <h1>NAVE ESTELAR</h1>
         <p class="subtitle">Space Shooter Ultra</p>
+        <div class="divider"></div>
         <div class="difficulty">
             <button onclick="selectDifficulty('easy')">FÁCIL</button>
             <button class="selected" id="btn-normal" onclick="selectDifficulty('normal')">NORMAL</button>
@@ -337,6 +362,7 @@
     let comboTimer = 0;
     let shakeFrames = 0;
     let shakeIntensity = 0;
+    let hitFlash = 0;
 
     // Power-ups
     let activePowerUps = {
@@ -535,14 +561,15 @@
     // ============ INITIALIZE STARS ============
     function initStars() {
         stars = [];
-        for (let i = 0; i < 150; i++) {
+        for (let i = 0; i < 200; i++) {
             stars.push({
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
-                size: Math.random() * 2 + 0.5,
-                speed: Math.random() * 2 + 0.5,
-                brightness: Math.random(),
-                colorIndex: Math.floor(Math.random() * 4)
+                size: Math.random() * 2.2 + 0.3,
+                speed: Math.random() * 2 + 0.3,
+                brightness: 0.4 + Math.random() * 0.6,
+                colorIndex: Math.floor(Math.random() * 4),
+                twinkle: Math.random() * Math.PI * 2
             });
         }
     }
@@ -693,7 +720,8 @@
             if (this.invincible > 0 || activePowerUps.shield > 0) return;
             
             health -= damage;
-            createParticles(this.x, this.y, 20, '#ff6b6b');
+            hitFlash = 18;
+            createParticles(this.x, this.y, 28, '#ff6b6b');
             playSound('hit');
             screenShake(10, 15);
 
@@ -726,21 +754,35 @@
         
         draw() {
             ctx.save();
-            ctx.shadowBlur = 12;
+            // Estela trasera larga
+            const trail = ctx.createLinearGradient(this.x, this.y + 22, this.x, this.y - 4);
+            trail.addColorStop(0, 'rgba(0,255,204,0)');
+            trail.addColorStop(0.6, 'rgba(0,220,180,0.3)');
+            trail.addColorStop(1, 'rgba(0,255,204,0.7)');
+            ctx.fillStyle = trail;
+            ctx.beginPath();
+            ctx.ellipse(this.x, this.y + 10, 3, 16, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Núcleo del proyectil
+            ctx.shadowBlur = 18;
             ctx.shadowColor = '#00ffcc';
-            // Trail
-            const grad = ctx.createLinearGradient(this.x, this.y + 14, this.x, this.y - 8);
-            grad.addColorStop(0, 'rgba(0,255,204,0)');
-            grad.addColorStop(1, 'rgba(0,255,204,0.8)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(this.x - 2, this.y, 4, 14);
-            // Core
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(this.x - 1.5, this.y - 8, 3, 10);
+            ctx.fillStyle = '#aafff0';
+            ctx.beginPath();
+            ctx.ellipse(this.x, this.y, 2.5, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Punta brillante
+            const tip = ctx.createRadialGradient(this.x, this.y - 5, 0, this.x, this.y - 5, 5);
+            tip.addColorStop(0, 'rgba(255,255,255,1)');
+            tip.addColorStop(0.5, 'rgba(0,255,200,0.7)');
+            tip.addColorStop(1, 'rgba(0,255,200,0)');
+            ctx.fillStyle = tip;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y - 5, 5, 0, Math.PI * 2);
+            ctx.fill();
             ctx.restore();
         }
     }
-    
+
     // ============ ENEMY CLASS ============
     class Enemy {
         constructor() {
@@ -872,13 +914,32 @@
         }
         
         draw() {
-            ctx.fillStyle = '#ff4444';
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#ff4444';
+            ctx.save();
+            // Estela hacia arriba
+            const trail = ctx.createLinearGradient(this.x, this.y - 18, this.x, this.y + 4);
+            trail.addColorStop(0, 'rgba(255,40,0,0)');
+            trail.addColorStop(1, 'rgba(255,80,0,0.6)');
+            ctx.fillStyle = trail;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+            ctx.ellipse(this.x, this.y - 8, 2.5, 12, 0, 0, Math.PI * 2);
             ctx.fill();
-            ctx.shadowBlur = 0;
+            // Núcleo
+            ctx.shadowBlur = 16;
+            ctx.shadowColor = '#ff2200';
+            ctx.fillStyle = '#ffcc88';
+            ctx.beginPath();
+            ctx.ellipse(this.x, this.y + 2, 2.5, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Punta inferior
+            const tip = ctx.createRadialGradient(this.x, this.y + 5, 0, this.x, this.y + 5, 6);
+            tip.addColorStop(0, 'rgba(255,255,180,1)');
+            tip.addColorStop(0.5, 'rgba(255,60,0,0.8)');
+            tip.addColorStop(1, 'rgba(255,0,0,0)');
+            ctx.fillStyle = tip;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y + 5, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
         }
     }
     
@@ -1117,29 +1178,44 @@
         constructor(x, y, color) {
             this.x = x;
             this.y = y;
-            this.vx = (Math.random() - 0.5) * 10;
-            this.vy = (Math.random() - 0.5) * 10;
+            this.vx = (Math.random() - 0.5) * 12;
+            this.vy = (Math.random() - 0.5) * 12;
             this.life = 1;
-            this.decay = 0.02 + Math.random() * 0.02;
+            this.decay = 0.018 + Math.random() * 0.025;
             this.color = color;
-            this.size = Math.random() * 4 + 2;
+            this.size = Math.random() * 5 + 1.5;
+            this.spark = Math.random() > 0.6; // algunas son chispas alargadas
         }
-        
+
         update() {
             this.x += this.vx;
             this.y += this.vy;
             this.life -= this.decay;
-            this.vx *= 0.98;
-            this.vy *= 0.98;
+            this.vx *= 0.97;
+            this.vy *= 0.97;
         }
-        
+
         draw() {
+            ctx.save();
             ctx.globalAlpha = this.life;
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = this.color;
             ctx.fillStyle = this.color;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.globalAlpha = 1;
+            if (this.spark) {
+                // Chispa alargada en dirección del movimiento
+                const angle = Math.atan2(this.vy, this.vx);
+                const len = this.size * 2.5;
+                ctx.translate(this.x, this.y);
+                ctx.rotate(angle);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, len, this.size * 0.4, 0, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
         }
     }
     
@@ -1178,47 +1254,125 @@
             this.types = ['shield', 'doubleShot', 'rapidFire', 'speed'];
             this.type = this.types[Math.floor(Math.random() * this.types.length)];
             this.speed = 2;
-            this.size = 25;
+            this.size = 22;
+            this.angle = Math.random() * Math.PI * 2;
         }
-        
+
         update() {
             this.y += this.speed;
+            this.angle += 0.04;
         }
-        
+
         draw() {
             const colors = {
-                shield: '#00ffcc',
+                shield:     '#00ffcc',
                 doubleShot: '#ffd93d',
-                rapidFire: '#ff6b6b',
-                speed: '#a855f7'
+                rapidFire:  '#ff6b6b',
+                speed:      '#cc88ff'
             };
+            const c = colors[this.type];
+            const t = Date.now() * 0.003;
+            const pulse = 0.85 + 0.15 * Math.sin(t);
 
             ctx.save();
-            ctx.fillStyle = colors[this.type];
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = colors[this.type];
+            ctx.translate(this.x, this.y);
+
+            // Anillo exterior giratorio
+            ctx.shadowBlur = 22 * pulse;
+            ctx.shadowColor = c;
+            ctx.strokeStyle = c;
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.5 + 0.3 * pulse;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.arc(0, 0, this.size + 6, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+
+            // Triángulos giratorios en el anillo
+            ctx.strokeStyle = c;
+            ctx.lineWidth = 1.5;
+            for (let i = 0; i < 3; i++) {
+                const a = this.angle + (i * Math.PI * 2) / 3;
+                const r = this.size + 6;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(a) * (r - 5), Math.sin(a) * (r - 5));
+                ctx.lineTo(Math.cos(a) * (r + 5), Math.sin(a) * (r + 5));
+                ctx.stroke();
+            }
+
+            // Fondo del orbe
+            const bg = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
+            bg.addColorStop(0, c.replace(')', ',0.5)').replace('rgb', 'rgba') + (c.startsWith('#') ? '' : ''));
+            // simpler approach:
+            bg.addColorStop(0, `rgba(255,255,255,0.15)`);
+            bg.addColorStop(0.5, c + '88');
+            bg.addColorStop(1, c + '33');
+            ctx.fillStyle = bg;
+            ctx.shadowBlur = 15 * pulse;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.size, 0, Math.PI * 2);
             ctx.fill();
 
-            // Try to use image, fallback to emoji
-            const assetName = this.type === 'doubleShot' ? 'doubleShot' :
-                              this.type === 'rapidFire' ? 'life' :
-                              this.type;
-            if (assets[assetName] && assets[assetName].complete) {
-                ctx.drawImage(assets[assetName], this.x - 15, this.y - 15, 30, 30);
-            } else {
-                const icons = {
-                    shield: '🛡️',
-                    doubleShot: '⚡',
-                    rapidFire: '🔥',
-                    speed: '💨'
-                };
-                ctx.font = '16px Arial';
-                ctx.textAlign = 'center';
-                ctx.shadowBlur = 0;
-                ctx.fillText(icons[this.type], this.x, this.y + 6);
+            // Borde del orbe
+            ctx.strokeStyle = c;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Símbolo central con canvas
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.rotate(-this.angle * 0.5); // contrarotación lenta
+
+            if (this.type === 'shield') {
+                // Escudo
+                ctx.beginPath();
+                ctx.moveTo(0, -10);
+                ctx.lineTo(8, -5);
+                ctx.lineTo(8, 3);
+                ctx.lineTo(0, 10);
+                ctx.lineTo(-8, 3);
+                ctx.lineTo(-8, -5);
+                ctx.closePath();
+                ctx.stroke();
+            } else if (this.type === 'doubleShot') {
+                // Doble rayo
+                for (const dx of [-4, 4]) {
+                    ctx.beginPath();
+                    ctx.moveTo(dx, -9);
+                    ctx.lineTo(dx, 9);
+                    ctx.stroke();
+                    // Punta de flecha
+                    ctx.beginPath();
+                    ctx.moveTo(dx - 3, -5);
+                    ctx.lineTo(dx, -9);
+                    ctx.lineTo(dx + 3, -5);
+                    ctx.stroke();
+                }
+            } else if (this.type === 'rapidFire') {
+                // Relámpago
+                ctx.beginPath();
+                ctx.moveTo(4, -10);
+                ctx.lineTo(-2, -1);
+                ctx.lineTo(3, -1);
+                ctx.lineTo(-4, 10);
+                ctx.lineTo(2, 1);
+                ctx.lineTo(-3, 1);
+                ctx.closePath();
+                ctx.fill();
+            } else if (this.type === 'speed') {
+                // Doble flecha
+                for (const dy of [-3, 3]) {
+                    ctx.beginPath();
+                    ctx.moveTo(-8, dy);
+                    ctx.lineTo(0, dy - 5);
+                    ctx.lineTo(8, dy);
+                    ctx.stroke();
+                }
             }
+
             ctx.restore();
         }
     }
@@ -1395,18 +1549,52 @@
             ctx.drawImage(assets['background'], 0, bgOffset - canvas.height, canvas.width, canvas.height);
             ctx.drawImage(assets['background'], 0, bgOffset, canvas.width, canvas.height);
         } else {
-            // Fallback: dibujar estrellas
+            // Fondo negro espacio
+            ctx.fillStyle = '#03030f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Nubes de nebulosa
+            const t = Date.now() * 0.00008;
+            const nebulas = [
+                { cx: 0.18, cy: 0.25 + Math.sin(t) * 0.04, r: 260, color: '30,0,100' },
+                { cx: 0.78, cy: 0.55 + Math.cos(t * 0.9) * 0.05, r: 220, color: '0,50,120' },
+                { cx: 0.45, cy: 0.75 + Math.sin(t * 1.1) * 0.03, r: 200, color: '80,0,60' },
+                { cx: 0.62, cy: 0.12, r: 180, color: '0,70,80' },
+            ];
+            for (const n of nebulas) {
+                const nx = n.cx * canvas.width, ny = n.cy * canvas.height;
+                const ng = ctx.createRadialGradient(nx, ny, 0, nx, ny, n.r);
+                ng.addColorStop(0, `rgba(${n.color},0.13)`);
+                ng.addColorStop(0.5, `rgba(${n.color},0.06)`);
+                ng.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = ng;
+                ctx.beginPath();
+                ctx.arc(nx, ny, n.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Estrellas con twinkle
+            const now = Date.now() * 0.001;
+            const starColors = ['255,255,255', '160,190,255', '255,235,160', '255,180,180'];
             stars.forEach(star => {
                 star.y += star.speed;
                 if (star.y > canvas.height) {
                     star.y = 0;
                     star.x = Math.random() * canvas.width;
                 }
-                const starColors = ['255,255,255', '180,200,255', '255,240,180', '255,200,200'];
-                ctx.fillStyle = `rgba(${starColors[star.colorIndex] || '255,255,255'},${star.brightness})`;
+                const twinkled = star.brightness * (0.55 + 0.45 * Math.sin(now * star.speed * 1.5 + star.twinkle));
+                ctx.fillStyle = `rgba(${starColors[star.colorIndex]},${twinkled})`;
                 ctx.beginPath();
                 ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
                 ctx.fill();
+                // Estrella grande: añadir destellos cruzados
+                if (star.size > 1.8) {
+                    ctx.strokeStyle = `rgba(${starColors[star.colorIndex]},${twinkled * 0.5})`;
+                    ctx.lineWidth = 0.5;
+                    const sp = star.size * 2.5;
+                    ctx.beginPath(); ctx.moveTo(star.x - sp, star.y); ctx.lineTo(star.x + sp, star.y); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(star.x, star.y - sp); ctx.lineTo(star.x, star.y + sp); ctx.stroke();
+                }
             });
         }
         
@@ -1602,9 +1790,26 @@
             combo = 0;
         }
 
+        // Hit flash overlay
+        if (hitFlash > 0) {
+            const alpha = (hitFlash / 18) * 0.35;
+            ctx.fillStyle = `rgba(255,0,0,${alpha})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Viñeta roja en bordes
+            const vignette = ctx.createRadialGradient(
+                canvas.width / 2, canvas.height / 2, canvas.height * 0.3,
+                canvas.width / 2, canvas.height / 2, canvas.height * 0.8
+            );
+            vignette.addColorStop(0, 'rgba(255,0,0,0)');
+            vignette.addColorStop(1, `rgba(180,0,0,${(hitFlash / 18) * 0.5})`);
+            ctx.fillStyle = vignette;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            hitFlash--;
+        }
+
         // Update UI
         updateUI();
-        
+
         ctx.restore(); // end screen shake
 
         requestAnimationFrame(gameLoop);
