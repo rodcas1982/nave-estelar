@@ -84,50 +84,49 @@
         }
         
         /* Mobile Controls */
-        /* Touch controls - Split screen (left/right) */
-        #touchControls {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 40;
+        #controls {
             display: none;
-        }
-        
-        /* Visual zones */
-        .touch-zone-indicator {
             position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 45%;
-            height: 60%;
-            border: 2px dashed rgba(255,255,255,0.1);
-            border-radius: 20px;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            justify-content: space-between;
+            padding: 0 20px;
+            align-items: flex-end;
+            z-index: 50;
+        }
+        .movement-controls {
+            display: flex;
+            gap: 12px;
+        }
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(0,255,204,0.4);
+            color: #00ffcc;
+            font-size: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2em;
-            color: rgba(255,255,255,0.15);
-            pointer-events: none;
-            transition: all 0.2s;
+            user-select: none;
+            -webkit-user-select: none;
+            backdrop-filter: blur(5px);
         }
-        .touch-zone-indicator.left {
-            left: 2%;
+        .control-btn:active {
+            background: rgba(0,255,204,0.4);
+            transform: scale(0.95);
         }
-        .touch-zone-indicator.right {
-            right: 2%;
+        .shoot-btn {
+            background: rgba(255,107,107,0.2);
+            border-color: #ff6b6b;
+            width: 70px;
+            height: 70px;
+            font-size: 24px;
         }
-        .touch-zone-indicator.active {
-            background: rgba(0,255,204,0.1);
-            border-color: rgba(0,255,204,0.5);
-            color: rgba(0,255,204,0.5);
-        }
-        
-        /* Show on mobile */
-        @media (max-width: 768px), (pointer: coarse) {
-            #touchControls { display: block; }
-            #controls { display: none; }
+        .shoot-btn:active {
+            background: rgba(255,107,107,0.5);
         }
         
         /* Overlay */
@@ -262,9 +261,8 @@
             color: #00ffcc;
         }
         
-        @media (max-width: 768px), (pointer: coarse) {
-            #controls { display: none; }
-            #touchControls { display: block; }
+        @media (max-width: 768px) {
+            #controls { display: flex; }
             #overlay h1 { font-size: 2em; }
         }
     </style>
@@ -291,12 +289,6 @@
         <button class="control-btn shoot-btn" id="shootBtn">🔥</button>
     </div>
 
-    <!-- New intuitive touch controls - split screen -->
-    <div id="touchControls">
-        <div class="touch-zone-indicator left" id="zoneLeft">◀ MOVER</div>
-        <div class="touch-zone-indicator right" id="zoneRight">💥 DISPARAR<br><span style="font-size:0.4em">🚀 Toca enemigo</span></div>
-    </div>
-
     <div id="overlay">
         <h1>🚀 NAVE ESTELAR</h1>
         <p class="subtitle">Space Shooter Ultra</p>
@@ -311,10 +303,8 @@
             <div><span class="stat-label">Nivel:</span> <span class="stat-value" id="finalLevel">1</span></div>
             <div><span class="stat-label">Kills:</span> <span class="stat-value" id="finalKills">0</span></div>
         </div>
-        <p style="margin-top:30px;opacity:0.7;font-size:0.9em;text-align:center;">
-            📱 MÓVIL: Izquierda=IZQ, Derecha=TAP para disparar<br>
-            🎯 ¡Toca cerca de un enemigo para lanzar cohete! 🚀<br>
-            🖥️ PC: Flechas + Espacio
+        <p style="margin-top:30px;opacity:0.5;font-size:0.8em;">
+            🖥️ PC: Flechas + Espacio | 📱 Móvil: Botones
         </p>
     </div>
 
@@ -335,9 +325,8 @@
     let gameRunning = false;
     let score = 0;
     let highScore = localStorage.getItem('naveEstelarHighScore') || 0;
-    let lives = 999; // 🌀 MODO DIOS ACTIVADO
+    let lives = 3;
     let health = 100;
-    let godMode = true; // 🌀 INVENCIBLE
     let level = 1;
     let difficulty = 'normal';
     let kills = 0;
@@ -351,7 +340,6 @@
         rapidFire: 0,
         speed: 0
     };
-    let hasRocket = false;
     
     // Achievements
     const achievements = [
@@ -494,7 +482,7 @@
         }
         
         hit(damage) {
-            if (this.invincible > 0 || activePowerUps.shield > 0 || godMode) return;
+            if (this.invincible > 0 || activePowerUps.shield > 0) return;
             
             health -= damage;
             createParticles(this.x, this.y, 20, '#ff6b6b');
@@ -657,7 +645,7 @@
         constructor(x, y) {
             this.x = x;
             this.y = y;
-            this.types = ['shield', 'doubleShot', 'rapidFire', 'speed', 'rocket'];
+            this.types = ['shield', 'doubleShot', 'rapidFire', 'speed'];
             this.type = this.types[Math.floor(Math.random() * this.types.length)];
             this.speed = 2;
             this.size = 25;
@@ -672,15 +660,13 @@
                 shield: '#00ffcc',
                 doubleShot: '#ffd93d',
                 rapidFire: '#ff6b6b',
-                speed: '#a855f7',
-                rocket: '#ff4444'
+                speed: '#a855f7'
             };
             const icons = {
                 shield: '🛡️',
                 doubleShot: '⚡',
                 rapidFire: '🔥',
-                speed: '💨',
-                rocket: '🚀'
+                speed: '💨'
             };
             
             ctx.save();
@@ -733,9 +719,6 @@
         }
         if (activePowerUps.rapidFire > 0) {
             indicator.innerHTML += '<div class="powerUp-icon" style="background:#ff6b6b">🔥</div>';
-        }
-        if (hasRocket) {
-            indicator.innerHTML += '<div class="powerUp-icon" style="background:#ff4444">🚀</div>';
         }
         
         // Update achievements display
@@ -929,21 +912,11 @@
             
             // Collision with player
             if (Math.abs(p.x - player.x) < 35 && Math.abs(p.y - player.y) < 35) {
-                if (p.type === 'rocket') {
-                    hasRocket = true;
-                } else {
-                    activePowerUps[p.type] = 300;
-                }
+                activePowerUps[p.type] = 300; // 5 seconds
                 powerUps.splice(powerUps.indexOf(p), 1);
                 score += 50;
             }
         });
-        
-        // Update rockets
-        updateRockets();
-        
-        // Draw rockets
-        drawRockets();
         
         // Update particles
         particles = particles.filter(p => p.life > 0);
@@ -973,267 +946,21 @@
         keys[e.key] = false;
     });
     
-    // Touch controls - only enable when game is running
-    const touchControls = document.getElementById('touchControls');
-    
-    function enableTouchControls() {
-        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-            touchControls.style.display = 'flex';
-        }
-    }
-    
-    function disableTouchControls() {
-        touchControls.style.display = 'none';
-    }
-    
-    // Enable/disable based on game state
-    const originalStartGame = window.startGame;
-    window.startGame = function(diff) {
-        enableTouchControls();
-        originalStartGame(diff);
-    };
-    
-    const originalGameOver = window.gameOver;
-    window.gameOver = function() {
-        disableTouchControls();
-        originalGameOver();
-    };
-    
-    // Initialize
-    disableTouchControls();
-    
-    // New intuitive touch controls - split screen: move + aim & shoot enemies
-    const touchControls = document.getElementById('touchControls');
-    const zoneLeftEl = document.getElementById('zoneLeft');
-    const zoneRightEl = document.getElementById('zoneRight');
-    let leftTouch = null;
-    let rightTouch = null;
-    let isLeftTouching = false;
-    let isRightTouching = false;
-    
-    // Rocket weapon
-    let hasRocket = false;
-    let rockets = [];
-    
-    // Show touch controls on mobile
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-        document.getElementById('controls').style.display = 'none';
-    }
-    
-    // Touch start
-    touchControls.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        
-        for (let touch of e.touches) {
-            const x = touch.clientX;
-            const screenWidth = window.innerWidth;
-            
-            // Check if touching near an enemy - auto aim and shoot!
-            if (hasRocket) {
-                const target = findTargetAt(touch.clientX, touch.clientY);
-                if (target) {
-                    shootRocket(target);
-                    hasRocket = false;
-                }
-            }
-            
-            if (x < screenWidth / 2) {
-                leftTouch = touch.identifier;
-                isLeftTouching = true;
-                zoneLeftEl.classList.add('active');
-            } else {
-                rightTouch = touch.identifier;
-                isRightTouching = true;
-                zoneRightEl.classList.add('active');
-            }
-        }
-    });
-    
-    // Find enemy at touch position
-    function findTargetAt(touchX, touchY) {
-        for (let enemy of enemies) {
-            const dx = enemy.x - touchX;
-            const dy = enemy.y - touchY;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < 80) { // Touch near enemy
-                return enemy;
-            }
-        }
-        return null;
-    }
-    
-    // Shoot rocket at target
-    function shootRocket(target) {
-        rockets.push({
-            x: player.x,
-            y: player.y,
-            target: target,
-            speed: 15
-        });
-    }
-    
-    // Update rockets
-    function updateRockets() {
-        rockets = rockets.filter(r => {
-            if (!r.target || r.target.health <= 0) return false;
-            
-            const dx = r.target.x - r.x;
-            const dy = r.target.y - r.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            
-            if (dist < 30) {
-                // Hit!
-                createParticles(r.target.x, r.target.y, 30, '#ff6b6b');
-                r.target.health -= 5;
-                if (r.target.health <= 0) {
-                    score += r.target.type === 'fighter' ? 500 : 250;
-                    kills++;
-                }
-                return false;
-            }
-            
-            r.x += (dx / dist) * r.speed;
-            r.y += (dy / dist) * r.speed;
-            return true;
-        });
-    }
-    
-    // Draw rockets
-    function drawRockets() {
-        rockets.forEach(r => {
-            ctx.save();
-            ctx.fillStyle = '#ff6b6b';
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = '#ff6b6b';
-            
-            // Rocket trail
-            ctx.beginPath();
-            ctx.moveTo(r.x, r.y);
-            ctx.lineTo(r.x - 5, r.y - 15);
-            ctx.lineTo(r.x + 5, r.y - 15);
-            ctx.closePath();
-            ctx.fill();
-            
-            // Rocket head
-            ctx.beginPath();
-            ctx.arc(r.x, r.y, 8, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.restore();
-        });
-    }
-    
-    // Touch start
-    const zoneLeftEl = document.getElementById('zoneLeft');
-    const zoneRightEl = document.getElementById('zoneRight');
-    
-    touchControls.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        
-        for (let touch of e.touches) {
-            const x = touch.clientX;
-            const screenWidth = window.innerWidth;
-            
-            if (x < screenWidth / 2) {
-                leftTouch = touch.identifier;
-                isLeftTouching = true;
-                zoneLeftEl.classList.add('active');
-            } else {
-                rightTouch = touch.identifier;
-                isRightTouching = true;
-                zoneRightEl.classList.add('active');
-            }
-        }
-    });
-    
-    // Touch move
-    touchControls.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        
-        isLeftTouching = false;
-        isRightTouching = false;
-        
-        for (let touch of e.changedTouches) {
-            const x = touch.clientX;
-            const screenWidth = window.innerWidth;
-            
-            if (x < screenWidth / 2) {
-                isLeftTouching = true;
-            } else {
-                isRightTouching = true;
-            }
-        }
-    });
-    
-    // Touch end
-    touchControls.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        
-        for (let touch of e.changedTouches) {
-            const x = touch.clientX;
-            const screenWidth = window.innerWidth;
-            
-            if (x < screenWidth / 2) {
-                leftTouch = null;
-                isLeftTouching = false;
-                zoneLeftEl.classList.remove('active');
-            } else {
-                rightTouch = null;
-                isRightTouching = false;
-                zoneRightEl.classList.remove('active');
-                
-                // Single tap on right side = shoot
-                touchShoot = true;
-                setTimeout(() => touchShoot = false, 150);
-            }
-        }
-    });
-    
-    touchControls.addEventListener('touchcancel', (e) => {
-        isLeftTouching = false;
-        isRightTouching = false;
-        touchShoot = false;
-        zoneLeftEl.classList.remove('active');
-        zoneRightEl.classList.remove('active');
-    });
-    
-    // Update player to follow touch zones
-    const originalPlayerUpdate = Player.prototype.update;
-    Player.prototype.update = function() {
-        // Touch control
-        if (isLeftTouching) {
-            this.x -= this.speed + (activePowerUps.speed > 0 ? 3 : 0);
-        }
-        if (isRightTouching) {
-            this.x += this.speed + (activePowerUps.speed > 0 ? 3 : 0);
-        }
-        
-        // Boundaries
-        this.x = Math.max(this.width/2, Math.min(canvas.width - this.width/2, this.x));
-        
-        // Shooting
-        if ((keys[' '] || touchShoot) && this.shootDelay <= 0) {
-            this.shoot();
-            this.shootDelay = activePowerUps.rapidFire > 0 ? 5 : 15;
-        }
-        if (this.shootDelay > 0) this.shootDelay--;
-        
-        // Invincibility
-        if (this.invincible > 0) this.invincible--;
-        
-        // Power-up timers
-        for (let p in activePowerUps) {
-            if (activePowerUps[p] > 0) activePowerUps[p]--;
-        }
-    };
-    
-    // Legacy button controls (for non-touch devices)
+    // Touch controls
     document.getElementById('leftBtn').addEventListener('touchstart', () => touchLeft = true);
     document.getElementById('leftBtn').addEventListener('touchend', () => touchLeft = false);
     document.getElementById('rightBtn').addEventListener('touchstart', () => touchRight = true);
     document.getElementById('rightBtn').addEventListener('touchend', () => touchRight = false);
     document.getElementById('shootBtn').addEventListener('touchstart', () => touchShoot = true);
     document.getElementById('shootBtn').addEventListener('touchend', () => touchShoot = false);
+    
+    // Mouse controls (for testing on PC)
+    document.getElementById('leftBtn').addEventListener('mousedown', () => touchLeft = true);
+    document.getElementById('leftBtn').addEventListener('mouseup', () => touchLeft = false);
+    document.getElementById('rightBtn').addEventListener('mousedown', () => touchRight = true);
+    document.getElementById('rightBtn').addEventListener('mouseup', () => touchRight = false);
+    document.getElementById('shootBtn').addEventListener('mousedown', () => touchShoot = true);
+    document.getElementById('shootBtn').addEventListener('mouseup', () => touchShoot = false);
     
     // Initialize
     initStars();
