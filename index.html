@@ -615,43 +615,75 @@
                 ctx.globalAlpha = 0.5;
             }
 
-            // Try to use player image
-            if (assets['spaceship'] && assets['spaceship'].complete) {
-                ctx.drawImage(assets['spaceship'], this.x - 25, this.y - 30, 50, 60);
-                // Engine flame (always drawn)
-                const flameH = 12 + Math.random() * 10;
-                const flameGrad = ctx.createRadialGradient(this.x, this.y + 32, 1, this.x, this.y + 32, flameH);
-                flameGrad.addColorStop(0, 'rgba(255,255,200,0.95)');
-                flameGrad.addColorStop(0.3, 'rgba(255,140,0,0.8)');
-                flameGrad.addColorStop(1, 'rgba(255,50,0,0)');
-                ctx.fillStyle = flameGrad;
-                ctx.beginPath();
-                ctx.ellipse(this.x, this.y + 32, 5, flameH, 0, 0, Math.PI * 2);
-                ctx.fill();
-            } else {
-                // Ship body fallback
-                ctx.fillStyle = '#00ffcc';
+            // === PLAYER SHIP ===
+            {
+                const t = Date.now();
+
+                // Dual engine flames
+                for (const ex of [-6, 6]) {
+                    const flameH = 14 + Math.sin(t * 0.12 + ex) * 5;
+                    const fg = ctx.createLinearGradient(this.x + ex, this.y + 28, this.x + ex, this.y + 28 + flameH);
+                    fg.addColorStop(0, 'rgba(255,255,220,1)');
+                    fg.addColorStop(0.35, 'rgba(80,200,255,0.85)');
+                    fg.addColorStop(1, 'rgba(0,80,255,0)');
+                    ctx.fillStyle = fg;
+                    ctx.beginPath();
+                    ctx.ellipse(this.x + ex, this.y + 30, 3.5, flameH, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#00ccff';
+
+                // Main body
+                const bodyGrad = ctx.createLinearGradient(this.x, this.y - 30, this.x, this.y + 28);
+                bodyGrad.addColorStop(0, '#aaf4ff');
+                bodyGrad.addColorStop(0.4, '#00ccee');
+                bodyGrad.addColorStop(1, '#004477');
+                ctx.fillStyle = bodyGrad;
                 ctx.beginPath();
                 ctx.moveTo(this.x, this.y - 30);
-                ctx.lineTo(this.x - 25, this.y + 25);
-                ctx.lineTo(this.x, this.y + 10);
-                ctx.lineTo(this.x + 25, this.y + 25);
+                ctx.lineTo(this.x - 6, this.y - 6);
+                ctx.lineTo(this.x - 26, this.y + 18);
+                ctx.lineTo(this.x - 10, this.y + 14);
+                ctx.lineTo(this.x - 8, this.y + 28);
+                ctx.lineTo(this.x + 8, this.y + 28);
+                ctx.lineTo(this.x + 10, this.y + 14);
+                ctx.lineTo(this.x + 26, this.y + 18);
+                ctx.lineTo(this.x + 6, this.y - 6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#00ffee';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Wing accent lines
+                ctx.strokeStyle = 'rgba(0,255,238,0.35)';
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(this.x - 6, this.y + 2); ctx.lineTo(this.x - 22, this.y + 16); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(this.x + 6, this.y + 2); ctx.lineTo(this.x + 22, this.y + 16); ctx.stroke();
+
+                // Cockpit dome
+                const cpg = ctx.createRadialGradient(this.x - 2, this.y - 14, 1, this.x, this.y - 10, 9);
+                cpg.addColorStop(0, '#ffffff');
+                cpg.addColorStop(0.5, '#88ddff');
+                cpg.addColorStop(1, '#002266');
+                ctx.fillStyle = cpg;
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y - 10, 7, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Hull center stripe
+                ctx.fillStyle = 'rgba(0,255,220,0.15)';
+                ctx.beginPath();
+                ctx.moveTo(this.x - 3, this.y - 2);
+                ctx.lineTo(this.x + 3, this.y - 2);
+                ctx.lineTo(this.x + 5, this.y + 27);
+                ctx.lineTo(this.x - 5, this.y + 27);
                 ctx.closePath();
                 ctx.fill();
 
-                // Cockpit
-                ctx.fillStyle = '#ffd93d';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y - 5, 8, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Engine glow
-                ctx.fillStyle = '#ff6b6b';
-                ctx.beginPath();
-                ctx.moveTo(this.x - 8, this.y + 25);
-                ctx.lineTo(this.x, this.y + 35 + Math.random() * 10);
-                ctx.lineTo(this.x + 8, this.y + 25);
-                ctx.fill();
+                ctx.shadowBlur = 0;
             }
 
             ctx.restore();
@@ -750,35 +782,77 @@
         draw() {
             ctx.save();
 
-            if (assets['enemy'] && assets['enemy'].complete) {
-                // Usar imagen del enemigo
-                ctx.drawImage(assets['enemy'], this.x - 20, this.y - 20, 40, 40);
-            } else if (this.type === 'asteroid') {
-                // Asteroid fallback
-                ctx.fillStyle = '#666';
+            if (this.type === 'asteroid') {
+                // === ASTEROID ===
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(Date.now() * 0.0008 + this.x * 0.05);
+                const rg = ctx.createRadialGradient(-4, -4, 2, 0, 0, 20);
+                rg.addColorStop(0, '#999990');
+                rg.addColorStop(0.5, '#666660');
+                rg.addColorStop(1, '#3a3a35');
+                ctx.fillStyle = rg;
+                const pts = [[0,-20],[11,-14],[19,-4],[17,9],[9,18],[-3,20],[-14,13],[-20,2],[-17,-9],[-9,-18]];
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#555';
-                ctx.beginPath();
-                ctx.arc(this.x - 5, this.y - 5, 8, 0, Math.PI * 2);
-                ctx.fill();
-            } else {
-                // Fighter ship fallback
-                ctx.fillStyle = '#ff4444';
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y + 20);
-                ctx.lineTo(this.x - 20, this.y - 15);
-                ctx.lineTo(this.x, this.y - 5);
-                ctx.lineTo(this.x + 20, this.y - 15);
+                ctx.moveTo(pts[0][0], pts[0][1]);
+                for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
                 ctx.closePath();
                 ctx.fill();
-
-                // Engine
-                ctx.fillStyle = '#ff8800';
+                ctx.strokeStyle = 'rgba(180,180,160,0.3)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                // Craters
+                ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                ctx.beginPath(); ctx.arc(-6, -5, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(7, 5, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(-1, 11, 2, 0, Math.PI * 2); ctx.fill();
+                // Highlight
+                ctx.fillStyle = 'rgba(220,220,200,0.12)';
+                ctx.beginPath(); ctx.arc(-8, -8, 7, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            } else {
+                // === ENEMY FIGHTER ===
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#ff2200';
+                const bodyGrad = ctx.createLinearGradient(this.x, this.y - 20, this.x, this.y + 22);
+                bodyGrad.addColorStop(0, '#881100');
+                bodyGrad.addColorStop(0.45, '#ff3300');
+                bodyGrad.addColorStop(1, '#660000');
+                ctx.fillStyle = bodyGrad;
                 ctx.beginPath();
-                ctx.arc(this.x, this.y - 20, 5, 0, Math.PI * 2);
+                ctx.moveTo(this.x, this.y + 22);
+                ctx.lineTo(this.x - 5, this.y + 4);
+                ctx.lineTo(this.x - 22, this.y - 12);
+                ctx.lineTo(this.x - 8, this.y - 7);
+                ctx.lineTo(this.x - 5, this.y - 20);
+                ctx.lineTo(this.x + 5, this.y - 20);
+                ctx.lineTo(this.x + 8, this.y - 7);
+                ctx.lineTo(this.x + 22, this.y - 12);
+                ctx.lineTo(this.x + 5, this.y + 4);
+                ctx.closePath();
                 ctx.fill();
+                ctx.strokeStyle = '#ff5533';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                // Wing lines
+                ctx.strokeStyle = 'rgba(255,100,0,0.45)';
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(this.x - 5, this.y - 4); ctx.lineTo(this.x - 18, this.y - 11); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(this.x + 5, this.y - 4); ctx.lineTo(this.x + 18, this.y - 11); ctx.stroke();
+                // Core glow
+                const cg = ctx.createRadialGradient(this.x, this.y - 3, 1, this.x, this.y - 3, 8);
+                cg.addColorStop(0, '#ffffff');
+                cg.addColorStop(0.4, '#ff8844');
+                cg.addColorStop(1, 'rgba(255,0,0,0)');
+                ctx.fillStyle = cg;
+                ctx.beginPath(); ctx.arc(this.x, this.y - 3, 8, 0, Math.PI * 2); ctx.fill();
+                // Engine top glow
+                const eg = ctx.createRadialGradient(this.x, this.y - 20, 0, this.x, this.y - 20, 7);
+                eg.addColorStop(0, 'rgba(255,160,0,0.9)');
+                eg.addColorStop(1, 'rgba(255,0,0,0)');
+                ctx.fillStyle = eg;
+                ctx.beginPath(); ctx.arc(this.x, this.y - 20, 7, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0;
             }
 
             ctx.restore();
@@ -862,50 +936,117 @@
         }
         
         draw() {
-            // Draw boss asset if available, else fallback to canvas
-            if (assets['enemy'] && assets['enemy'].complete) {
+            // === BOSS - massive warship ===
+            {
+                const t = Date.now();
+                const pulse = Math.sin(t * 0.003) * 0.5 + 0.5;
+                const x = this.x, y = this.y;
+
                 ctx.save();
-                ctx.filter = 'hue-rotate(150deg) saturate(300%) brightness(1.3)';
-                ctx.drawImage(assets['enemy'], this.x - 60, this.y - 50, 120, 100);
-                ctx.filter = 'none';
+
+                // Outer aura
+                ctx.shadowBlur = 25 + pulse * 15;
+                ctx.shadowColor = '#cc0000';
+
+                // === WINGS ===
+                const wgL = ctx.createLinearGradient(x - 80, y, x, y);
+                wgL.addColorStop(0, '#330000');
+                wgL.addColorStop(1, '#880000');
+                ctx.fillStyle = wgL;
+                ctx.beginPath();
+                ctx.moveTo(x - 22, y + 20);
+                ctx.lineTo(x - 80, y + 30);
+                ctx.lineTo(x - 85, y + 5);
+                ctx.lineTo(x - 72, y - 22);
+                ctx.lineTo(x - 22, y - 8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#ff2200';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                const wgR = ctx.createLinearGradient(x, y, x + 80, y);
+                wgR.addColorStop(0, '#880000');
+                wgR.addColorStop(1, '#330000');
+                ctx.fillStyle = wgR;
+                ctx.beginPath();
+                ctx.moveTo(x + 22, y + 20);
+                ctx.lineTo(x + 80, y + 30);
+                ctx.lineTo(x + 85, y + 5);
+                ctx.lineTo(x + 72, y - 22);
+                ctx.lineTo(x + 22, y - 8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#ff2200';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Wing accent lines
+                ctx.strokeStyle = 'rgba(255,80,0,0.4)';
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(x - 24, y + 6); ctx.lineTo(x - 76, y + 14); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(x + 24, y + 6); ctx.lineTo(x + 76, y + 14); ctx.stroke();
+
+                // === WING CANNONS ===
+                for (const wx of [-72, 72]) {
+                    ctx.fillStyle = '#220000';
+                    ctx.fillRect(x + wx - 5, y + 12, 10, 28);
+                    ctx.strokeStyle = '#ff2200';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x + wx - 5, y + 12, 10, 28);
+                    const cg = ctx.createRadialGradient(x + wx, y + 42, 1, x + wx, y + 42, 9);
+                    cg.addColorStop(0, `rgba(255,150,0,${0.7 + pulse * 0.3})`);
+                    cg.addColorStop(0.5, `rgba(255,40,0,${0.4 + pulse * 0.3})`);
+                    cg.addColorStop(1, 'rgba(255,0,0,0)');
+                    ctx.fillStyle = cg;
+                    ctx.beginPath(); ctx.arc(x + wx, y + 42, 9, 0, Math.PI * 2); ctx.fill();
+                }
+
+                // === MAIN HULL ===
+                const hull = ctx.createLinearGradient(x, y - 50, x, y + 50);
+                hull.addColorStop(0, '#550000');
+                hull.addColorStop(0.3, '#990000');
+                hull.addColorStop(0.7, '#cc1100');
+                hull.addColorStop(1, '#770000');
+                ctx.fillStyle = hull;
+                ctx.beginPath();
+                ctx.moveTo(x, y + 52);
+                ctx.lineTo(x - 18, y + 22);
+                ctx.lineTo(x - 24, y - 5);
+                ctx.lineTo(x - 16, y - 42);
+                ctx.lineTo(x, y - 52);
+                ctx.lineTo(x + 16, y - 42);
+                ctx.lineTo(x + 24, y - 5);
+                ctx.lineTo(x + 18, y + 22);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#ff3300';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Hull panel lines
+                ctx.strokeStyle = 'rgba(255,60,0,0.25)';
+                ctx.lineWidth = 1;
+                for (const lx of [-8, 8]) {
+                    ctx.beginPath(); ctx.moveTo(x + lx, y - 40); ctx.lineTo(x + lx, y + 40); ctx.stroke();
+                }
+                ctx.beginPath(); ctx.moveTo(x - 18, y + 5); ctx.lineTo(x + 18, y + 5); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(x - 20, y - 15); ctx.lineTo(x + 20, y - 15); ctx.stroke();
+
+                // === ENERGY CORE ===
+                const core = ctx.createRadialGradient(x, y - 5, 2, x, y - 5, 20);
+                core.addColorStop(0, `rgba(255,255,210,${0.85 + pulse * 0.15})`);
+                core.addColorStop(0.25, `rgba(255,100,0,${0.8 + pulse * 0.2})`);
+                core.addColorStop(0.6, `rgba(180,0,0,0.5)`);
+                core.addColorStop(1, 'rgba(100,0,0,0)');
+                ctx.fillStyle = core;
+                ctx.beginPath(); ctx.arc(x, y - 5, 20, 0, Math.PI * 2); ctx.fill();
+
+                ctx.fillStyle = `rgba(255,255,255,${0.7 + pulse * 0.3})`;
+                ctx.beginPath(); ctx.arc(x, y - 5, 7, 0, Math.PI * 2); ctx.fill();
+
+                ctx.shadowBlur = 0;
                 ctx.restore();
-            } else {
-                // Boss body - large enemy ship
-                ctx.fillStyle = '#8b0000';
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y + 50);
-                ctx.lineTo(this.x - 60, this.y - 30);
-                ctx.lineTo(this.x - 20, this.y - 10);
-                ctx.lineTo(this.x, this.y - 25);
-                ctx.lineTo(this.x + 20, this.y - 10);
-                ctx.lineTo(this.x + 60, this.y - 30);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Wings
-                ctx.fillStyle = '#660000';
-                ctx.beginPath();
-                ctx.moveTo(this.x - 20, this.y);
-                ctx.lineTo(this.x - 70, this.y + 20);
-                ctx.lineTo(this.x - 70, this.y - 10);
-                ctx.closePath();
-                ctx.fill();
-                ctx.beginPath();
-                ctx.moveTo(this.x + 20, this.y);
-                ctx.lineTo(this.x + 70, this.y + 20);
-                ctx.lineTo(this.x + 70, this.y - 10);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Cockpit
-                ctx.fillStyle = '#ff0000';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, 15, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#ff6666';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y - 5, 7, 0, Math.PI * 2);
-                ctx.fill();
             }
             
             // Health bar
