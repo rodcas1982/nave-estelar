@@ -294,11 +294,11 @@
         <h1>🚀 NAVE ESTELAR</h1>
         <p class="subtitle">Space Shooter Ultra</p>
         <div class="difficulty">
-            <button onclick="startGame('easy')">FÁCIL</button>
-            <button class="selected" onclick="startGame('normal')">NORMAL</button>
-            <button onclick="startGame('hard')">DIFÍCIL</button>
+            <button onclick="selectDifficulty('easy')">FÁCIL</button>
+            <button class="selected" id="btn-normal" onclick="selectDifficulty('normal')">NORMAL</button>
+            <button onclick="selectDifficulty('hard')">DIFÍCIL</button>
         </div>
-        <button onclick="startGame()">🚀 INICIAR</button>
+        <button onclick="startGame(difficulty)">🚀 INICIAR</button>
         <div id="gameStats" style="display:none;">
             <div><span class="stat-label">Puntos:</span> <span class="stat-value" id="finalScore">0</span></div>
             <div><span class="stat-label">Nivel:</span> <span class="stat-value" id="finalLevel">1</span></div>
@@ -1322,6 +1322,18 @@
         achievements.forEach(a => a.unlocked = false);
     }
     
+    // ============ DIFFICULTY SELECTION ============
+    function selectDifficulty(diff) {
+        difficulty = diff;
+        document.querySelectorAll('#overlay .difficulty button').forEach(btn => {
+            btn.classList.remove('selected');
+        });
+        const labels = { easy: 'FÁCIL', normal: 'NORMAL', hard: 'DIFÍCIL' };
+        document.querySelectorAll('#overlay .difficulty button').forEach(btn => {
+            if (btn.textContent.trim() === labels[diff]) btn.classList.add('selected');
+        });
+    }
+
     // ============ START GAME ============
     function startGame(diff = 'normal') {
         difficulty = diff;
