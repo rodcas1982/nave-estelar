@@ -13,7 +13,7 @@ python3 -m http.server 8080
 
 ## Architecture
 
-The entire game is a single file: **`index.html`** (≈1750 lines). All HTML, CSS, and JavaScript live together. There is no module system, bundler, or package manager.
+The entire game is a single file: **`index.html`** (≈1885 lines). All HTML, CSS, and JavaScript live together. There is no module system, bundler, or package manager.
 
 ### Code Sections
 
@@ -22,23 +22,31 @@ The JavaScript is organized with `// ============ SECTION ============` markers.
 | Section | Lines | Purpose |
 |---|---|---|
 | GAME CONFIG | ~338 | Canvas setup, offscreen nebula canvas, game state variables |
-| INITIALIZE STARS | ~560 | Creates 150 star objects with pre-computed color strings |
-| PLAYER CLASS | ~566 | Movement, shooting, shield, dual-engine glow, canvas ship drawing |
-| BULLET | ~730 | Plasma bolt with trail + tip glow; no shadowBlur (batched in loop) |
-| ENEMY CLASS | ~750 | Fighter + asteroid types, movement patterns, shooting |
-| ENEMY BULLET | ~878 | Energy teardrop projectile; no shadowBlur (batched in loop) |
-| BOSS CLASS | ~908 | Multi-phase warship with wings, cannons, pulsing core, health bar |
-| PARTICLE | ~1140 | Circle + spark variants with alpha fade; no shadowBlur |
-| FLOATING TEXT | ~1185 | Score/combo text that drifts upward |
-| POWER-UP CLASS | ~1205 | Four types with rotating orb + canvas icon |
-| GAME LOOP | ~1520 | Main `requestAnimationFrame` loop |
-| DIFFICULTY SELECTION | ~1620 | `selectDifficulty()` — updates button highlight without starting game |
-| START GAME | ~1630 | Resets all state, starts loop |
-| CONTROLS | ~1770 | Keyboard + touch event listeners |
+| ASSET PRELOADING | ~410 | Image asset loading system (present but unused — canvas draws everything) |
+| SOUND SYSTEM | ~441 | `playSound()` — procedural Web Audio API oscillator sounds |
+| SCREEN SHAKE | ~563 | Camera shake effect on damage |
+| INITIALIZE STARS | ~569 | Creates 150 star objects with pre-computed color strings |
+| PLAYER CLASS | ~589 | Movement, shooting, shield, dual-engine glow, canvas ship drawing |
+| BULLET CLASS | ~754 | Plasma bolt with trail + tip glow; no shadowBlur (batched in loop) |
+| ENEMY CLASS | ~794 | Fighter + asteroid types, movement patterns, shooting |
+| ENEMY BULLET | ~912 | Energy teardrop projectile; no shadowBlur (batched in loop) |
+| BOSS CLASS | ~950 | Multi-phase warship with wings, cannons, pulsing core, health bar |
+| FLOATING TEXT | ~1224 | Score/combo text that drifts upward |
+| POWER-UP CLASS | ~1251 | Four types with rotating orb + canvas icon |
+| CREATE PARTICLES | ~1382 | Particle spawning helper |
+| SPAWN ENEMY | ~1389 | Enemy wave spawning logic |
+| UPDATE UI | ~1408 | HUD rendering (score, lives, health bar, achievements) |
+| CHECK ACHIEVEMENTS | ~1439 | Achievement unlock conditions |
+| SHOW COMBO | ~1448 | Combo multiplier display |
+| GAME OVER | ~1461 | Game over screen and high score saving |
+| DIFFICULTY SELECTION | ~1481 | `selectDifficulty()` — updates button highlight without starting game |
+| START GAME | ~1493 | Resets all state, starts loop |
+| GAME LOOP | ~1528 | Main `requestAnimationFrame` loop |
+| CONTROLS | ~1828 | Keyboard + touch event listeners |
 
 ### Game State
 
-Global variables declared around line 353:
+Global variables declared around line 353 (within GAME CONFIG):
 - `gameRunning`, `gamePaused`, `score`, `lives`, `health`, `level`, `difficulty`, `kills`, `combo`
 - `hitFlash` — countdown (18→0) that renders a red damage overlay on screen
 - `activePowerUps` — object tracking remaining duration of each power-up
@@ -84,7 +92,7 @@ Key objects and their visual style:
 
 ### Sound
 
-`playSound(type)` generates sounds procedurally with Web Audio API oscillators — no audio files. Add new sounds by adding a case to the switch in `playSound()` (~line 430).
+`playSound(type)` generates sounds procedurally with Web Audio API oscillators — no audio files. Add new sounds by adding a case to the switch in `playSound()` (~line 452).
 
 ## Commit Conventions
 
